@@ -95,12 +95,12 @@ Client* Perl_Raid_GetClientByIndex(Raid* self, uint16_t member_index) // @catego
 
 void Perl_Raid_TeleportGroup(Raid* self, Mob* sender, uint32 zone_id, float x, float y, float z, float heading, uint32 group_id) // @categories Group, Raid
 {
-	self->TeleportGroup(sender, zone_id, 0, x, y, z, heading, group_id);
+	self->TeleportGroup(sender, zone_id, x, y, z, heading, group_id);
 }
 
 void Perl_Raid_TeleportRaid(Raid* self, Mob* sender, uint32 zone_id, float x, float y, float z, float heading) // @categories Raid
 {
-	self->TeleportRaid(sender, zone_id, 0, x, y, z, heading);
+	self->TeleportRaid(sender, zone_id, x, y, z, heading);
 }
 
 uint32_t Perl_Raid_GetID(Raid* self) // @categories Raid
@@ -115,16 +115,6 @@ Client* Perl_Raid_GetMember(Raid* self, int member_index) // @categories Raid
 	}
 
 	return self->members[member_index].member;
-}
-
-bool Perl_Raid_DoesAnyMemberHaveExpeditionLockout(Raid* self, std::string expedition_name, std::string event_name)
-{
-	return self->DoesAnyMemberHaveExpeditionLockout(expedition_name, event_name);
-}
-
-bool Perl_Raid_DoesAnyMemberHaveExpeditionLockout(Raid* self, std::string expedition_name, std::string event_name, int max_check_count)
-{
-	return self->DoesAnyMemberHaveExpeditionLockout(expedition_name, event_name, max_check_count);
 }
 
 int Perl_Raid_GetGroupNumber(Raid* self, int member_index) {
@@ -145,8 +135,6 @@ void perl_register_raid()
 	auto package = perl.new_class<Raid>("Raid");
 	package.add("BalanceHP", &Perl_Raid_BalanceHP);
 	package.add("CastGroupSpell", &Perl_Raid_CastGroupSpell);
-	package.add("DoesAnyMemberHaveExpeditionLockout", (bool(*)(Raid*, std::string, std::string))&Perl_Raid_DoesAnyMemberHaveExpeditionLockout);
-	package.add("DoesAnyMemberHaveExpeditionLockout", (bool(*)(Raid*, std::string, std::string, int))&Perl_Raid_DoesAnyMemberHaveExpeditionLockout);
 	package.add("GetClientByIndex", &Perl_Raid_GetClientByIndex);
 	package.add("GetGroup", (uint32(*)(Raid*, const char*))&Perl_Raid_GetGroup);
 	package.add("GetGroup", (uint32(*)(Raid*, Client*))&Perl_Raid_GetGroup);

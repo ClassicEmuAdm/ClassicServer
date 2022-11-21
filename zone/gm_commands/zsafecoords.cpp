@@ -21,13 +21,12 @@ void command_zsafecoords(Client *c, const Seperator *sep)
 	auto permanent = sep->arg[4] ? atobool(sep->arg[4]) : false;
 	if (permanent) {
 		auto query = fmt::format(
-			"UPDATE zone SET safe_x = {:.2f}, safe_y = {:.2f}, safe_z = {:.2f}, safe_heading = {:.2f} WHERE zoneidnumber = {} AND version = {}",
+			"UPDATE zone SET safe_x = {:.2f}, safe_y = {:.2f}, safe_z = {:.2f}, safe_heading = {:.2f} WHERE zoneidnumber = {}",
 			x,
 			y,
 			z,
 			heading,
-			zone->GetZoneID(),
-			zone->GetInstanceVersion()
+			zone->GetZoneID()
 		);
 		database.QueryDatabase(query);
 	}

@@ -759,9 +759,6 @@ void Client::AI_Process()
 				}
 				if (RuleB(Character, ProcessFearedProximity) && proximity_timer.Check()) {
 					entity_list.ProcessMove(this, glm::vec3(GetX(), GetY(), GetZ()));
-					if (RuleB(TaskSystem, EnableTaskSystem) && RuleB(TaskSystem, EnableTaskProximity))
-						ProcessTaskProximities(GetX(), GetY(), GetZ());
-
 					m_Proximity = glm::vec3(GetX(), GetY(), GetZ());
 				}
 				return;

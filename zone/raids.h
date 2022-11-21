@@ -161,8 +161,8 @@ public:
 	void	HealGroup(uint32 heal_amt, Mob* caster, uint32 gid, float range = 0);
 	void	SplitMoney(uint32 gid, uint32 copper, uint32 silver, uint32 gold, uint32 platinum, Client *splitter = nullptr);
 
-	void	TeleportGroup(Mob* sender, uint32 zoneID, uint16 instance_id, float x, float y, float z, float heading, uint32 gid);
-	void	TeleportRaid(Mob* sender, uint32 zoneID, uint16 instance_id, float x, float y, float z, float heading);
+	void	TeleportGroup(Mob* sender, uint32 zoneID, float x, float y, float z, float heading, uint32 gid);
+	void	TeleportRaid(Mob* sender, uint32 zoneID, float x, float y, float z, float heading);
 
 	//updates the list of Client* objects based on who's in and not in the zone.
 	//also learns raid structure based on db.

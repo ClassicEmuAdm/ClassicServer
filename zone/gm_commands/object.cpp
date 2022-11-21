@@ -69,7 +69,7 @@ void command_object(Client *c, const Seperator *sep)
 				"AND (ypos BETWEEN %.1f AND %.1f) "
 				"AND (zpos BETWEEN %.1f AND %.1f) "
 				"ORDER BY id",
-				zone->GetZoneID(), zone->GetInstanceVersion(),
+				zone->GetZoneID(),
 				c->GetX() - radius, // Yes, we're actually using a bounding box instead of a radius.
 				c->GetX() + radius, // Much less processing power used this way.
 				c->GetY() - radius, c->GetY() + radius, c->GetZ() - radius, c->GetZ() + radius
@@ -80,7 +80,7 @@ void command_object(Client *c, const Seperator *sep)
 				"objectname, type, icon, unknown08, unknown10, unknown20 "
 				"FROM object WHERE zoneid = %u AND version = %u "
 				"ORDER BY id",
-				zone->GetZoneID(), zone->GetInstanceVersion());
+				zone->GetZoneID());
 
 		auto results = content_db.QueryDatabase(query);
 		if (!results.Success()) {
@@ -251,7 +251,7 @@ void command_object(Client *c, const Seperator *sep)
 			"AND version=%u AND (xpos BETWEEN %.1f AND %.1f) "
 			"AND (ypos BETWEEN %.1f AND %.1f) "
 			"AND (zpos BETWEEN %.1f AND %.1f)",
-			zone->GetZoneID(), zone->GetInstanceVersion(), od.x - 0.2f,
+			zone->GetZoneID(), od.x - 0.2f,
 			od.x + 0.2f,           // Yes, we're actually using a bounding box instead of a radius.
 			od.y - 0.2f, od.y + 0.2f,  // Much less processing power used this way.
 			od.z - 0.2f, od.z + 0.2f
@@ -320,7 +320,6 @@ void command_object(Client *c, const Seperator *sep)
 		} // Temporary. We'll make it 0 when we Save
 
 		od.zone_id       = zone->GetZoneID();
-		od.zone_instance = zone->GetInstanceVersion();
 
 		o = new Object(id, od.object_type, icon, od, nullptr);
 
@@ -382,19 +381,12 @@ void command_object(Client *c, const Seperator *sep)
 
 			auto row = results.begin();
 			od.zone_id       = atoi(row[0]);
-			od.zone_instance = atoi(row[1]);
 			od.object_type   = atoi(row[2]);
 			uint32 objectsFound = 1;
 
 			// Object not in this zone?
 			if (od.zone_id != zone->GetZoneID()) {
 				c->Message(Chat::White, "ERROR: Object %u not in this zone.", id);
-				return;
-			}
-
-			// Object not in this instance?
-			if (od.zone_instance != zone->GetInstanceVersion()) {
-				c->Message(Chat::White, "ERROR: Object %u not part of this instance version.", id);
 				return;
 			}
 
@@ -639,16 +631,10 @@ void command_object(Client *c, const Seperator *sep)
 
 			auto row = results.begin();
 			od.zone_id       = atoi(row[0]);
-			od.zone_instance = atoi(row[1]);
 			od.object_type   = atoi(row[2]);
 
 			if (od.zone_id != zone->GetZoneID()) {
 				c->Message(Chat::White, "ERROR: Object %u is not in this zone", id);
-				return;
-			}
-
-			if (od.zone_instance != zone->GetInstanceVersion()) {
-				c->Message(Chat::White, "ERROR: Object %u is not in this instance version", id);
 				return;
 			}
 
@@ -778,7 +764,6 @@ void command_object(Client *c, const Seperator *sep)
 		o = entity_list.FindObject(id);
 
 		od.zone_id       = 0;
-		od.zone_instance = 0;
 		od.object_type   = 0;
 
 		// If this ID isn't in the database yet, it's a new object
@@ -788,7 +773,6 @@ void command_object(Client *c, const Seperator *sep)
 		if (results.Success() && results.RowCount() != 0) {
 			auto row = results.begin();
 			od.zone_id       = atoi(row[0]);
-			od.zone_instance = atoi(row[1]);
 			od.object_type   = atoi(row[2]);
 
 			// ID already in database. Not a new object.
@@ -805,11 +789,6 @@ void command_object(Client *c, const Seperator *sep)
 
 			if (od.zone_id != zone->GetZoneID()) {
 				c->Message(Chat::White, "ERROR: Wrong Object ID. %u is not part of this zone.", id);
-				return;
-			}
-
-			if (od.zone_instance != zone->GetInstanceVersion()) {
-				c->Message(Chat::White, "ERROR: Wrong Object ID. %u is not part of this instance version.", id);
 				return;
 			}
 
@@ -842,12 +821,6 @@ void command_object(Client *c, const Seperator *sep)
 			id = 0;
 		}
 
-		// Oops! Another GM already saved an object with our id from another instance.
-		// We'll have to get a new one.
-		if ((id > 0) && (od.zone_instance != zone->GetInstanceVersion())) {
-			id = 0;
-		}
-
 		// If we're asking for a new ID, it's a new object.
 		bNewObject |= (id == 0);
 
@@ -862,12 +835,12 @@ void command_object(Client *c, const Seperator *sep)
 
 		if (!bNewObject) {
 			query = StringFormat(
-				"UPDATE object SET zoneid = %u, version = %u, "
+				"UPDATE object SET zoneid = %u,"
 				"xpos = %.1f, ypos=%.1f, zpos=%.1f, heading=%.1f, "
 				"objectname = '%s', type = %u, icon = %u, "
 				"unknown08 = %u, unknown10 = %u, unknown20 = %u "
 				"WHERE ID = %u",
-				zone->GetZoneID(), zone->GetInstanceVersion(), od.x, od.y, od.z,
+				zone->GetZoneID(), od.x, od.y, od.z,
 				od.heading, od.object_name, od.object_type, icon, od.size,
 				od.solidtype, od.unknown020, id
 			);
@@ -875,10 +848,10 @@ void command_object(Client *c, const Seperator *sep)
 		else if (id == 0) {
 			query = StringFormat(
 				"INSERT INTO object "
-				"(zoneid, version, xpos, ypos, zpos, heading, objectname, "
+				"(zoneid, xpos, ypos, zpos, heading, objectname, "
 				"type, icon, unknown08, unknown10, unknown20) "
 				"VALUES (%u, %u, %.1f, %.1f, %.1f, %.1f, '%s', %u, %u, %u, %u, %u)",
-				zone->GetZoneID(), zone->GetInstanceVersion(), od.x, od.y, od.z,
+				zone->GetZoneID(), od.x, od.y, od.z,
 				od.heading, od.object_name, od.object_type, icon, od.size,
 				od.solidtype, od.unknown020
 			);
@@ -886,10 +859,10 @@ void command_object(Client *c, const Seperator *sep)
 		else {
 			query = StringFormat(
 				"INSERT INTO object "
-				"(id, zoneid, version, xpos, ypos, zpos, heading, objectname, "
+				"(id, zoneid, xpos, ypos, zpos, heading, objectname, "
 				"type, icon, unknown08, unknown10, unknown20) "
 				"VALUES (%u, %u, %u, %.1f, %.1f, %.1f, %.1f, '%s', %u, %u, %u, %u, %u)",
-				id, zone->GetZoneID(), zone->GetInstanceVersion(), od.x, od.y, od.z,
+				id, zone->GetZoneID(), od.x, od.y, od.z,
 				od.heading, od.object_name, od.object_type, icon, od.size,
 				od.solidtype, od.unknown020
 			);
@@ -1014,13 +987,6 @@ void command_object(Client *c, const Seperator *sep)
 			return;
 		}
 
-		od.zone_instance = atoi(sep->arg[3]);
-
-		if (od.zone_instance == zone->GetInstanceVersion()) {
-			c->Message(Chat::White, "ERROR: Source and destination instance versions are the same.");
-			return;
-		}
-
 		if ((sep->arg[2][0] & 0xDF) == 'A') {
 			// Copy All
 
@@ -1029,10 +995,10 @@ void command_object(Client *c, const Seperator *sep)
 								"INSERT INTO object "
 								"(zoneid, version, xpos, ypos, zpos, heading, itemid, "
 								"objectname, type, icon, unknown08, unknown10, unknown20) "
-								"SELECT zoneid, %u, xpos, ypos, zpos, heading, itemid, "
+								"SELECT zoneid, xpos, ypos, zpos, heading, itemid, "
 								"objectname, type, icon, unknown08, unknown10, unknown20 "
-								"FROM object WHERE zoneid = %u) AND version = %u",
-								od.zone_instance, zone->GetZoneID(), zone->GetInstanceVersion());
+								"FROM object WHERE zoneid = %u)",
+								zone->GetZoneID());
 			auto        results = content_db.QueryDatabase(query);
 			if (!results.Success()) {
 				c->Message(Chat::White, "Database Error: %s", results.ErrorMessage().c_str());
@@ -1040,8 +1006,8 @@ void command_object(Client *c, const Seperator *sep)
 			}
 
 			c->Message(
-				Chat::White, "Copied %u object%s into instance version %u", results.RowCount(),
-				(results.RowCount() == 1) ? "" : "s", od.zone_instance
+				Chat::White, "Copied %u object%s into instance", results.RowCount(),
+				(results.RowCount() == 1) ? "" : "s"
 			);
 			return;
 		}
@@ -1052,13 +1018,13 @@ void command_object(Client *c, const Seperator *sep)
 			"INSERT INTO object "
 			"(zoneid, version, xpos, ypos, zpos, heading, itemid, "
 			"objectname, type, icon, unknown08, unknown10, unknown20) "
-			"SELECT zoneid, %u, xpos, ypos, zpos, heading, itemid, "
+			"SELECT zoneid, xpos, ypos, zpos, heading, itemid, "
 			"objectname, type, icon, unknown08, unknown10, unknown20 "
-			"FROM object WHERE id = %u AND zoneid = %u AND version = %u",
-			od.zone_instance, id, zone->GetZoneID(), zone->GetInstanceVersion());
+			"FROM object WHERE id = %u AND zoneid = %u",
+			id, zone->GetZoneID());
 		auto        results = content_db.QueryDatabase(query);
 		if (results.Success() && results.RowsAffected() > 0) {
-			c->Message(Chat::White, "Copied Object %u into instance version %u", id, od.zone_instance);
+			c->Message(Chat::White, "Copied Object %u into instance version", id);
 			return;
 		}
 
@@ -1090,16 +1056,9 @@ void command_object(Client *c, const Seperator *sep)
 			return;
 		}
 
-		// Wrong Instance Version?
-		if (atoi(row[1]) != zone->GetInstanceVersion()) {
-			c->Message(Chat::White, "ERROR: Object %u is not part of this instance version.", id);
-			return;
-		}
-
 		// Well, NO clue at this point. Just let 'em know something screwed up.
 		c->Message(
-			Chat::White, "ERROR: Unknown database error copying Object %u to instance version %u", id,
-			od.zone_instance
+			Chat::White, "ERROR: Unknown database error copying Object %u to instance version", id
 		);
 		return;
 	}
@@ -1130,8 +1089,8 @@ void command_object(Client *c, const Seperator *sep)
 			std::string query   = StringFormat(
 				"DELETE FROM object "
 				"WHERE id = %u AND zoneid = %u "
-				"AND version = %u LIMIT 1",
-				id, zone->GetZoneID(), zone->GetInstanceVersion());
+				"LIMIT 1",
+				id, zone->GetZoneID() );
 			auto        results = content_db.QueryDatabase(query);
 
 			c->Message(Chat::White, "Object %u deleted", id);
@@ -1142,8 +1101,8 @@ void command_object(Client *c, const Seperator *sep)
 		std::string query   = StringFormat(
 			"SELECT type FROM object "
 			"WHERE id = %u AND zoneid = %u "
-			"AND version = %u LIMIT 1",
-			id, zone->GetZoneID(), zone->GetInstanceVersion());
+			"LIMIT 1",
+			id, zone->GetZoneID());
 		auto        results = content_db.QueryDatabase(query);
 		if (!results.Success()) {
 			return;
@@ -1160,8 +1119,8 @@ void command_object(Client *c, const Seperator *sep)
 			case 0: // Static Object
 				query   = StringFormat(
 					"DELETE FROM object WHERE id = %u "
-					"AND zoneid = %u AND version = %u LIMIT 1",
-					id, zone->GetZoneID(), zone->GetInstanceVersion());
+					"AND zoneid = %u LIMIT 1",
+					id, zone->GetZoneID());
 				results = content_db.QueryDatabase(query);
 
 				c->Message(

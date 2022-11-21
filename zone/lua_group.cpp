@@ -94,9 +94,9 @@ uint32 Lua_Group::GetLowestLevel() {
 	return self->GetLowestLevel();
 }
 
-void Lua_Group::TeleportGroup(Lua_Mob sender, uint32 zone_id, uint32 instance_id, float x, float y, float z, float h) {
+void Lua_Group::TeleportGroup(Lua_Mob sender, uint32 zone_id, float x, float y, float z, float h) {
 	Lua_Safe_Call_Void();
-	self->TeleportGroup(sender, zone_id, instance_id, x, y, z, h);
+	self->TeleportGroup(sender, zone_id, x, y, z, h);
 }
 
 int Lua_Group::GetID() {
@@ -114,18 +114,6 @@ Lua_Mob Lua_Group::GetMember(int member_index) {
 	return self->members[member_index];
 }
 
-bool Lua_Group::DoesAnyMemberHaveExpeditionLockout(std::string expedition_name, std::string event_name)
-{
-	Lua_Safe_Call_Bool();
-	return self->DoesAnyMemberHaveExpeditionLockout(expedition_name, event_name);
-}
-
-bool Lua_Group::DoesAnyMemberHaveExpeditionLockout(std::string expedition_name, std::string event_name, int max_check_count)
-{
-	Lua_Safe_Call_Bool();
-	return self->DoesAnyMemberHaveExpeditionLockout(expedition_name, event_name, max_check_count);
-}
-
 uint32 Lua_Group::GetAverageLevel() {
 	Lua_Safe_Call_Int();
 	return self->GetAvgLevel();
@@ -138,8 +126,6 @@ luabind::scope lua_register_group() {
 	.property("valid", &Lua_Group::Valid)
 	.def("CastGroupSpell", (void(Lua_Group::*)(Lua_Mob,int))&Lua_Group::CastGroupSpell)
 	.def("DisbandGroup", (void(Lua_Group::*)(void))&Lua_Group::DisbandGroup)
-	.def("DoesAnyMemberHaveExpeditionLockout", (bool(Lua_Group::*)(std::string, std::string))&Lua_Group::DoesAnyMemberHaveExpeditionLockout)
-	.def("DoesAnyMemberHaveExpeditionLockout", (bool(Lua_Group::*)(std::string, std::string, int))&Lua_Group::DoesAnyMemberHaveExpeditionLockout)
 	.def("GetAverageLevel", (uint32(Lua_Group::*)(void))&Lua_Group::GetAverageLevel)
 	.def("GetHighestLevel", (uint32(Lua_Group::*)(void))&Lua_Group::GetHighestLevel)
 	.def("GetID", (int(Lua_Group::*)(void))&Lua_Group::GetID)

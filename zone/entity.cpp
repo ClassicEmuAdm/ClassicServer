@@ -34,7 +34,6 @@
 #include "../common/guilds.h"
 
 #include "entity.h"
-#include "dynamic_zone.h"
 #include "guild_mgr.h"
 #include "petitions.h"
 #include "quest_parser_collection.h"
@@ -4144,45 +4143,6 @@ void EntityList::ProcessProximitySay(const char *Message, Client *c, uint8 langu
 	}
 }
 
-void EntityList::SaveAllClientsTaskState()
-{
-	if (!task_manager) {
-		return;
-	}
-
-	auto it = client_list.begin();
-	while (it != client_list.end()) {
-		Client *client = it->second;
-		if (client->IsTaskStateLoaded()) {
-			client->SaveTaskState();
-		}
-
-		++it;
-	}
-}
-
-void EntityList::ReloadAllClientsTaskState(int task_id)
-{
-	if (!task_manager)
-		return;
-
-	auto it = client_list.begin();
-	while (it != client_list.end()) {
-		Client *client = it->second;
-		if (client->IsTaskStateLoaded()) {
-			// If we have been passed a TaskID, only reload the client state if they have
-			// that Task active.
-			if ((!task_id) || (task_id && client->IsTaskActive(task_id))) {
-				Log(Logs::General, Logs::Tasks, "[CLIENTLOAD] Reloading Task State For Client %s", client->GetName());
-				client->RemoveClientTaskState();
-				client->LoadClientTaskState();
-				task_manager->SendActiveTasksToClient(client);
-			}
-		}
-		++it;
-	}
-}
-
 bool EntityList::IsMobInZone(Mob *who)
 {
 	//We don't use mob_list.find(who) because this code needs to be able to handle dangling pointers for the quest code.
@@ -5772,20 +5732,6 @@ std::unordered_map<uint16, Mob *> &EntityList::GetCloseMobList(Mob *mob, float d
 	return mob_list;
 }
 
-void EntityList::GateAllClientsToSafeReturn()
-{
-	DynamicZone* dz = zone ? zone->GetDynamicZone() : nullptr;
-
-	for (const auto& client_list_iter : client_list)
-	{
-		if (client_list_iter.second)
-		{
-			// falls back to gating clients to bind if dz invalid
-			client_list_iter.second->GoToDzSafeReturnOrBind(dz);
-		}
-	}
-}
-
 int EntityList::MovePlayerCorpsesToGraveyard(bool force_move_from_instance)
 {
 	if (!zone)
@@ -5803,10 +5749,6 @@ int EntityList::MovePlayerCorpsesToGraveyard(bool force_move_from_instance)
 			if (zone->HasGraveyard())
 			{
 				moved = it->second->MovePlayerCorpseToGraveyard();
-			}
-			else if (force_move_from_instance && zone->GetInstanceID() != 0)
-			{
-				moved = it->second->MovePlayerCorpseToNonInstance();
 			}
 		}
 

@@ -54,7 +54,7 @@ void command_zone(Client *c, const Seperator *sep)
 	}
 
 	// status checking
-	auto min_status = content_db.GetMinStatus(zone_id, 0);
+	auto min_status = content_db.GetMinStatus(zone_id);
 	if (c->Admin() < min_status) {
 		c->Message(Chat::White, "Your status is not high enough to go to this zone.");
 		return;

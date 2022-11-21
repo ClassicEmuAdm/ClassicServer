@@ -50,8 +50,6 @@ void perl_register_spell();
 void perl_register_hateentry();
 void perl_register_object();
 void perl_register_doors();
-void perl_register_expedition();
-void perl_register_expedition_lock_messages();
 #ifdef BOTS
 void perl_register_bot();
 #endif // BOTS
@@ -1091,8 +1089,6 @@ void PerlembParser::MapFunctions()
 	perl_register_hateentry();
 	perl_register_object();
 	perl_register_doors();
-	perl_register_expedition();
-	perl_register_expedition_lock_messages();
 #ifdef BOTS
 	perl_register_bot();
 #endif // BOTS
@@ -1459,8 +1455,6 @@ void PerlembParser::ExportZoneVariables(std::string &package_name)
 		ExportVar(package_name.c_str(), "zoneid", zone->GetZoneID());
 		ExportVar(package_name.c_str(), "zoneln", zone->GetLongName());
 		ExportVar(package_name.c_str(), "zonesn", zone->GetShortName());
-		ExportVar(package_name.c_str(), "instanceid", zone->GetInstanceID());
-		ExportVar(package_name.c_str(), "instanceversion", zone->GetInstanceVersion());
 		TimeOfDay_Struct eqTime;
 		zone->zone_time.GetCurrentEQTimeOfDay(time(0), &eqTime);
 		ExportVar(package_name.c_str(), "zonehour", eqTime.hour - 1);
@@ -1618,7 +1612,6 @@ void PerlembParser::ExportEventVariables(
 
 		case EVENT_CLICK_DOOR: {
 			ExportVar(package_name.c_str(), "doorid", data);
-			ExportVar(package_name.c_str(), "version", zone->GetInstanceVersion());
 			break;
 		}
 
@@ -1635,11 +1628,7 @@ void PerlembParser::ExportEventVariables(
 		case EVENT_ZONE: {
 			Seperator sep(data);
 			ExportVar(package_name.c_str(), "from_zone_id", sep.arg[0]);
-			ExportVar(package_name.c_str(), "from_instance_id", sep.arg[1]);
-			ExportVar(package_name.c_str(), "from_instance_version", sep.arg[2]);
 			ExportVar(package_name.c_str(), "target_zone_id", sep.arg[3]);
-			ExportVar(package_name.c_str(), "target_instance_id", sep.arg[4]);
-			ExportVar(package_name.c_str(), "target_instance_version", sep.arg[5]);
 			break;
 		}
 

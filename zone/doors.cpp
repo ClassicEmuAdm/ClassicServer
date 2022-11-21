@@ -65,9 +65,6 @@ Doors::Doors(const DoorsRepository::Doors &door) :
 	m_door_param              = door.door_param;
 	m_size                    = door.size;
 	m_invert_state            = door.invert_state;
-	m_destination_instance_id = door.dest_instance;
-	m_is_ldon_door            = door.is_ldon_door;
-	m_dz_switch_id            = door.dz_switch_id;
 	m_client_version_mask     = door.client_version_mask;
 
 	SetOpenState(false);
@@ -87,8 +84,8 @@ Doors::Doors(const char *model, const glm::vec4 &position, uint8 open_type, uint
 	strn0cpy(m_door_name, model, 32);
 	strn0cpy(m_destination_zone_name, "NONE", 32);
 
-	m_database_id = (uint32) content_db.GetDoorsCountPlusOne(zone->GetShortName(), zone->GetInstanceVersion());
-	m_door_id     = (uint8) content_db.GetDoorsDBCountPlusOne(zone->GetShortName(), zone->GetInstanceVersion());
+	m_database_id = (uint32) content_db.GetDoorsCountPlusOne(zone->GetShortName());
+	m_door_id     = (uint8) content_db.GetDoorsDBCountPlusOne(zone->GetShortName());
 
 	m_open_type               = open_type;
 	m_size                    = size;
@@ -102,10 +99,8 @@ Doors::Doors(const char *model, const glm::vec4 &position, uint8 open_type, uint
 	triggered                 = false;
 	m_door_param              = 0;
 	m_invert_state            = 0;
-	m_is_ldon_door            = 0;
 	m_client_version_mask     = 4294967295u;
 	m_disable_timer           = 0;
-	m_destination_instance_id = 0;
 
 	SetOpenState(false);
 	m_close_timer.Disable();
@@ -170,54 +165,6 @@ void Doors::HandleClick(Client *sender, uint8 trigger)
 	auto outapp            = new EQApplicationPacket(OP_MoveDoor, sizeof(MoveDoor_Struct));
 	auto *move_door_packet = (MoveDoor_Struct *) outapp->pBuffer;
 	move_door_packet->doorid = m_door_id;
-
-	if (IsLDoNDoor()) {
-		if (sender) {
-			if (RuleI(Adventure, ItemIDToEnablePorts) != 0) {
-				if (!sender->KeyRingCheck(RuleI(Adventure, ItemIDToEnablePorts))) {
-					if (sender->GetInv().HasItem(RuleI(Adventure, ItemIDToEnablePorts)) == INVALID_INDEX) {
-						sender->MessageString(Chat::Red, DUNGEON_SEALED);
-						safe_delete(outapp);
-						return;
-					}
-					else {
-						sender->KeyRingAdd(RuleI(Adventure, ItemIDToEnablePorts));
-					}
-				}
-			}
-
-			if (!sender->GetPendingAdventureDoorClick()) {
-				sender->PendingAdventureDoorClick();
-				auto pack = new ServerPacket(
-					ServerOP_AdventureClickDoor,
-					sizeof(ServerPlayerClickedAdventureDoor_Struct)
-				);
-
-				/**
-				 * Adventure door
-				 */
-				ServerPlayerClickedAdventureDoor_Struct *adventure_door_click;
-				adventure_door_click = (ServerPlayerClickedAdventureDoor_Struct *) pack->pBuffer;
-				strcpy(adventure_door_click->player, sender->GetName());
-
-				adventure_door_click->zone_id = zone->GetZoneID();
-				adventure_door_click->id      = GetDoorDBID();
-
-				worldserver.SendPacket(pack);
-				safe_delete(pack);
-			}
-			safe_delete(outapp);
-			return;
-		}
-	}
-
-	if (m_dz_switch_id != 0) {
-		sender->UpdateTasksOnTouchSwitch(m_dz_switch_id);
-		if (sender->TryMovePCDynamicZoneSwitch(m_dz_switch_id)) {
-			safe_delete(outapp);
-			return;
-		}
-	}
 
 	uint32 required_key_item       = GetKeyItem();
 	uint8  disable_add_to_key_ring = GetNoKeyring();
@@ -496,7 +443,6 @@ void Doors::HandleClick(Client *sender, uint8 trigger)
 			}
 			sender->MovePC(
 				zone->GetZoneID(),
-				zone->GetInstanceID(),
 				m_destination.x,
 				m_destination.y,
 				m_destination.z,
@@ -517,7 +463,6 @@ void Doors::HandleClick(Client *sender, uint8 trigger)
 			if (ZoneID(m_destination_zone_name) == zone->GetZoneID()) {
 				sender->MovePC(
 					zone->GetZoneID(),
-					zone->GetInstanceID(),
 					m_destination.x,
 					m_destination.y,
 					m_destination.z,
@@ -527,7 +472,6 @@ void Doors::HandleClick(Client *sender, uint8 trigger)
 			else {
 				sender->MovePC(
 					ZoneID(m_destination_zone_name),
-					static_cast<uint32>(m_destination_instance_id),
 					m_destination.x,
 					m_destination.y,
 					m_destination.z,
@@ -540,7 +484,6 @@ void Doors::HandleClick(Client *sender, uint8 trigger)
 			if (ZoneID(m_destination_zone_name) == zone->GetZoneID()) {
 				sender->MovePC(
 					zone->GetZoneID(),
-					zone->GetInstanceID(),
 					m_destination.x,
 					m_destination.y,
 					m_destination.z,
@@ -550,7 +493,6 @@ void Doors::HandleClick(Client *sender, uint8 trigger)
 			else {
 				sender->MovePC(
 					ZoneID(m_destination_zone_name),
-					static_cast<uint32>(m_destination_instance_id),
 					m_destination.x,
 					m_destination.y,
 					m_destination.z,
@@ -685,13 +627,13 @@ void Doors::ToggleState(Mob *sender)
 	safe_delete(outapp);
 }
 
-int32 ZoneDatabase::GetDoorsCount(uint32 *oMaxID, const char *zone_name, int16 version)
+int32 ZoneDatabase::GetDoorsCount(uint32 *oMaxID, const char *zone_name)
 {
 
 	std::string query   = StringFormat(
 		"SELECT MAX(id), count(*) FROM doors "
-		"WHERE zone = '%s' AND (version = %u OR version = -1)",
-		zone_name, version
+		"WHERE zone = '%s'",
+		zone_name
 	);
 	auto        results = QueryDatabase(query);
 	if (!results.Success()) {
@@ -719,12 +661,11 @@ int32 ZoneDatabase::GetDoorsCount(uint32 *oMaxID, const char *zone_name, int16 v
 
 }
 
-int32 ZoneDatabase::GetDoorsCountPlusOne(const char *zone_name, int16 version)
+int32 ZoneDatabase::GetDoorsCountPlusOne(const char *zone_name)
 {
 	std::string query   = StringFormat(
-		"SELECT MAX(id) FROM doors WHERE zone = '%s' AND version = %u",
-		zone_name,
-		version
+		"SELECT MAX(id) FROM doors WHERE zone = '%s'",
+		zone_name
 	);
 	auto        results = QueryDatabase(query);
 	if (!results.Success()) {
@@ -744,15 +685,15 @@ int32 ZoneDatabase::GetDoorsCountPlusOne(const char *zone_name, int16 version)
 	return atoi(row[0]) + 1;
 }
 
-int32 ZoneDatabase::GetDoorsDBCountPlusOne(const char *zone_name, int16 version)
+int32 ZoneDatabase::GetDoorsDBCountPlusOne(const char *zone_name)
 {
 
 	uint32 oMaxID = 0;
 
 	std::string query   = StringFormat(
 		"SELECT MAX(doorid) FROM doors "
-		"WHERE zone = '%s' AND (version = %u OR version = -1)",
-		zone_name, version
+		"WHERE zone = '%s'",
+		zone_name
 	);
 	auto        results = QueryDatabase(query);
 	if (!results.Success()) {
@@ -772,16 +713,16 @@ int32 ZoneDatabase::GetDoorsDBCountPlusOne(const char *zone_name, int16 version)
 	return atoi(row[0]) + 1;
 }
 
-std::vector<DoorsRepository::Doors> ZoneDatabase::LoadDoors(const std::string &zone_name, int16 version)
+std::vector<DoorsRepository::Doors> ZoneDatabase::LoadDoors(const std::string &zone_name)
 {
 	LogInfo("Loading Doors from database");
 
 	auto door_entries = DoorsRepository::GetWhere(
 		*this, fmt::format(
-			"zone = '{}' AND (version = {} OR version = -1) {} ORDER BY doorid ASC",
-			zone_name, version, ContentFilterCriteria::apply()));
+			"zone = '{}' {} ORDER BY doorid ASC",
+			zone_name, ContentFilterCriteria::apply()));
 
-	LogDoors("Loaded [{}] doors for [{}] version [{}]", door_entries.size(), zone_name, version);
+	LogDoors("Loaded [{}] doors for [{}]", door_entries.size(), zone_name);
 
 	return door_entries;
 }
@@ -843,7 +784,7 @@ void Doors::SetDisableTimer(bool flag)
 
 void Doors::CreateDatabaseEntry()
 {
-	if (content_db.GetDoorsDBCountPlusOne(zone->GetShortName(), zone->GetInstanceVersion()) - 1 >= 255) {
+	if (content_db.GetDoorsDBCountPlusOne(zone->GetShortName()) - 1 >= 255) {
 		return;
 	}
 

@@ -20,7 +20,6 @@
 #include "clientlist.h"
 #include "login_server.h"
 #include "login_server_list.h"
-#include "shared_task_manager.h"
 #include "worlddb.h"
 #include "zoneserver.h"
 #include "world_config.h"
@@ -31,7 +30,6 @@ extern uint32          numplayers;
 extern LoginServerList loginserverlist;
 extern ClientList      client_list;
 extern volatile bool   RunLoops;
-extern SharedTaskManager shared_task_manager;
 
 /**
  * @param in_id
@@ -250,8 +248,6 @@ void ClientListEntry::LeavingZone(ZoneServer *iZS, CLE_Status iOnline)
 		return;
 	}
 	SetOnline(iOnline);
-
-	shared_task_manager.RemoveActiveInvitationByCharacterID(CharID());
 
 	if (pzoneserver) {
 		pzoneserver->RemovePlayer();

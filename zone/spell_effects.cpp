@@ -542,7 +542,7 @@ bool Mob::SpellEffect(Mob* caster, uint16 spell_id, float partial, int level_ove
 						LogDebug("Succor/Evacuation Spell In Same Zone");
 #endif
 							if(IsClient())
-								CastToClient()->MovePC(zone->GetZoneID(), zone->GetInstanceID(), x, y, z, heading, 0, EvacToSafeCoords);
+								CastToClient()->MovePC(zone->GetZoneID(), x, y, z, heading, 0, EvacToSafeCoords);
 							else
 								GMMove(x, y, z, heading);
 					}
@@ -620,7 +620,7 @@ bool Mob::SpellEffect(Mob* caster, uint16 spell_id, float partial, int level_ove
 				if(IsClient())
 				{
 					if(!target_zone)
-						CastToClient()->MovePC(zone->GetZoneID(), zone->GetInstanceID(), x, y, z, heading);
+						CastToClient()->MovePC(zone->GetZoneID(), x, y, z, heading);
 					else
 						CastToClient()->MovePC(target_zone, x, y, z, heading);
 				}
@@ -1868,77 +1868,6 @@ bool Mob::SpellEffect(Mob* caster, uint16 spell_id, float partial, int level_ove
 					buffs[buffslot].hit_number = effect_value;
 				break;
 			}
-			case SE_AppraiseLDonChest:
-			{
-				if(IsNPC())
-				{
-					int check = spell.max_value[0];
-					int target = spell.target_type;
-					if(target == ST_LDoNChest_Cursed)
-					{
-						if(caster && caster->IsClient())
-						{
-							caster->CastToClient()->HandleLDoNSenseTraps(CastToNPC(), check, LDoNTypeCursed);
-						}
-					}
-					else if(target == ST_Target)
-					{
-						if(caster && caster->IsClient())
-						{
-							caster->CastToClient()->HandleLDoNSenseTraps(CastToNPC(), check, LDoNTypeMagical);
-						}
-					}
-				}
-				break;
-			}
-
-			case SE_DisarmLDoNTrap:
-			{
-				if(IsNPC())
-				{
-					int check = spell.max_value[0];
-					int target = spell.target_type;
-					if(target == ST_LDoNChest_Cursed)
-					{
-						if(caster && caster->IsClient())
-						{
-							caster->CastToClient()->HandleLDoNDisarm(CastToNPC(), check, LDoNTypeCursed);
-						}
-					}
-					else if(target == ST_Target)
-					{
-						if(caster && caster->IsClient())
-						{
-							caster->CastToClient()->HandleLDoNDisarm(CastToNPC(), check, LDoNTypeMagical);
-						}
-					}
-				}
-				break;
-			}
-
-			case SE_UnlockLDoNChest:
-			{
-				if(IsNPC())
-				{
-					int check = spell.max_value[0];
-					int target = spell.target_type;
-					if(target == ST_LDoNChest_Cursed)
-					{
-						if(caster && caster->IsClient())
-						{
-							caster->CastToClient()->HandleLDoNPickLock(CastToNPC(), check, LDoNTypeCursed);
-						}
-					}
-					else if(target == ST_Target)
-					{
-						if(caster && caster->IsClient())
-						{
-							caster->CastToClient()->HandleLDoNPickLock(CastToNPC(), check, LDoNTypeMagical);
-						}
-					}
-				}
-				break;
-			}
 
 			case SE_Lull:
 			{
@@ -2154,7 +2083,7 @@ bool Mob::SpellEffect(Mob* caster, uint16 spell_id, float partial, int level_ove
 						}
 					}
 
-					CastToClient()->MovePC(zone->GetZoneID(), zone->GetInstanceID(), caster->GetX(),
+					CastToClient()->MovePC(zone->GetZoneID(), caster->GetX(),
 							       caster->GetY(), caster->GetZ(), caster->GetHeading(), 2,
 							       SummonPC);
 					MessageString(Chat::Spells, PLAYER_SUMMONED);
@@ -2714,7 +2643,7 @@ bool Mob::SpellEffect(Mob* caster, uint16 spell_id, float partial, int level_ove
 						float new_ground = GetGroundZ(my_x, my_y);
 
 						if(caster->IsClient())
-							caster->CastToClient()->MovePC(zone->GetZoneID(), zone->GetInstanceID(), my_x, my_y, new_ground, GetHeading());
+							caster->CastToClient()->MovePC(zone->GetZoneID(), my_x, my_y, new_ground, GetHeading());
 						else
 							caster->GMMove(my_x, my_y, new_ground, GetHeading());
 					}

@@ -30,11 +30,10 @@ void command_spawneditmass(Client *c, const Seperator *sep)
 			JOIN spawnentry ON spawnentry.npcID = npc_types.id
 			JOIN spawn2 ON spawn2.spawngroupID = spawnentry.spawngroupID
 			WHERE
-				spawn2.zone = '{}' AND spawn2.version = {}
+				spawn2.zone = '{}'
 			GROUP BY npc_types.id
 		),
-		zone->GetShortName(),
-		zone->GetInstanceVersion()
+		zone->GetShortName()
 	);
 
 	std::vector<std::string> spawn2_ids;

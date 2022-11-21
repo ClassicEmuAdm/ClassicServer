@@ -5,7 +5,6 @@
 #include "../common/global_define.h"
 #include "embperl.h"
 #include "client.h"
-#include "expedition.h"
 #include "titles.h"
 #include "dialogue_window.h"
 
@@ -52,11 +51,6 @@ bool Perl_Client_IsLD(Client* self) // @categories Account and Character
 void Perl_Client_WorldKick(Client* self) // @categories Script Utility
 {
 	self->WorldKick();
-}
-
-void Perl_Client_SendToGuildHall(Client* self) // @categories Script Utility, Guild
-{
-	self->SendToGuildHall();
 }
 
 int Perl_Client_GetAnon(Client* self) // @categories Account and Character, Stats and Attributes
@@ -144,11 +138,6 @@ int Perl_Client_GetLanguageSkill(Client* self, uint16 lanuage_id) // @categories
 	return self->GetLanguageSkill(lanuage_id);
 }
 
-uint32_t Perl_Client_GetLDoNPointsTheme(Client* self, int theme) // @categories Currency and Points
-{
-	return self->GetLDoNPointsTheme(theme);
-}
-
 int Perl_Client_GetBaseSTR(Client* self) // @categories Stats and Attributes
 {
 	return self->GetBaseSTR();
@@ -209,11 +198,6 @@ uint32_t Perl_Client_GetTotalSecondsPlayed(Client* self) // @categories Account 
 	return self->GetTotalSecondsPlayed();
 }
 
-bool Perl_Client_UpdateLDoNPoints(Client* self, uint32 theme_id, int points) // @categories Currency and Points
-{
-	return self->UpdateLDoNPoints(theme_id, points);
-}
-
 void Perl_Client_SetDeity(Client* self, uint32 deity_id) // @categories Account and Character, Stats and Attributes
 {
 	self->SetDeity(deity_id);
@@ -254,29 +238,24 @@ void Perl_Client_SetBindPoint(Client* self, int to_zone) // @categories Account 
 	self->SetBindPoint2(0, to_zone);
 }
 
-void Perl_Client_SetBindPoint(Client* self, int to_zone, int to_instance) // @categories Account and Character, Stats and Attributes
+void Perl_Client_SetBindPoint(Client* self, int to_zone, float new_x) // @categories Account and Character, Stats and Attributes
 {
-	self->SetBindPoint2(0, to_zone, to_instance);
+	self->SetBindPoint2(0, to_zone, glm::vec4(new_x, 0.0f, 0.0f, 0.0f));
 }
 
-void Perl_Client_SetBindPoint(Client* self, int to_zone, int to_instance, float new_x) // @categories Account and Character, Stats and Attributes
+void Perl_Client_SetBindPoint(Client* self, int to_zone, float new_x, float new_y) // @categories Account and Character, Stats and Attributes
 {
-	self->SetBindPoint2(0, to_zone, to_instance, glm::vec4(new_x, 0.0f, 0.0f, 0.0f));
+	self->SetBindPoint2(0, to_zone, glm::vec4(new_x, new_y, 0.0f, 0.0f));
 }
 
-void Perl_Client_SetBindPoint(Client* self, int to_zone, int to_instance, float new_x, float new_y) // @categories Account and Character, Stats and Attributes
+void Perl_Client_SetBindPoint(Client* self, int to_zone, float new_x, float new_y, float new_z) // @categories Account and Character, Stats and Attributes
 {
-	self->SetBindPoint2(0, to_zone, to_instance, glm::vec4(new_x, new_y, 0.0f, 0.0f));
+	self->SetBindPoint2(0, to_zone, glm::vec4(new_x, new_y, new_z, 0.0f));
 }
 
-void Perl_Client_SetBindPoint(Client* self, int to_zone, int to_instance, float new_x, float new_y, float new_z) // @categories Account and Character, Stats and Attributes
+void Perl_Client_SetBindPoint(Client* self, int to_zone, float new_x, float new_y, float new_z, float new_heading) // @categories Account and Character, Stats and Attributes
 {
-	self->SetBindPoint2(0, to_zone, to_instance, glm::vec4(new_x, new_y, new_z, 0.0f));
-}
-
-void Perl_Client_SetBindPoint(Client* self, int to_zone, int to_instance, float new_x, float new_y, float new_z, float new_heading) // @categories Account and Character, Stats and Attributes
-{
-	self->SetBindPoint2(0, to_zone, to_instance, glm::vec4(new_x, new_y, new_z, new_heading));
+	self->SetBindPoint2(0, to_zone, glm::vec4(new_x, new_y, new_z, new_heading));
 }
 
 float Perl_Client_GetBindX(Client* self) // @categories Account and Character
@@ -334,11 +313,6 @@ void Perl_Client_MovePC(Client* self, uint32 zone_id, float x, float y, float z,
 	self->MovePC(zone_id, x, y, z, heading);
 }
 
-void Perl_Client_MovePCInstance(Client* self, uint32 zone_id, uint32 instance_id, float x, float y, float z, float heading) // @categories Adventures and Expeditions, Script Utility
-{
-	self->MovePC(zone_id, instance_id, x, y, z, heading);
-}
-
 void Perl_Client_MoveZone(Client* self, const char* zone_short_name) // @categories Script Utility
 {
 	self->MoveZone(zone_short_name);
@@ -352,21 +326,6 @@ void Perl_Client_MoveZoneGroup(Client* self, const char* zone_short_name) // @ca
 void Perl_Client_MoveZoneRaid(Client* self, const char* zone_short_name) // @categories Script Utility, Raid
 {
 	self->MoveZoneRaid(zone_short_name);
-}
-
-void Perl_Client_MoveZoneInstance(Client* self, uint16 instance_id) // @categories Adventures and Expeditions, Script Utility
-{
-	self->MoveZoneInstance(instance_id);
-}
-
-void Perl_Client_MoveZoneInstanceGroup(Client* self, uint16 instance_id) // @categories Adventures and Expeditions, Script Utility, Group
-{
-	self->MoveZoneInstanceGroup(instance_id);
-}
-
-void Perl_Client_MoveZoneInstanceRaid(Client* self, uint16 instance_id) // @categories Adventures and Expeditions, Script Utility, Raid
-{
-	self->MoveZoneInstanceRaid(instance_id);
 }
 
 void Perl_Client_ChangeLastName(Client* self, std::string last_name) // @categories Account and Character
@@ -1122,26 +1081,6 @@ int Perl_Client_GetModCharacterFactionLevel(Client* self, int faction_id) // @ca
 	return self->GetModCharacterFactionLevel(faction_id);
 }
 
-uint32_t Perl_Client_GetLDoNWins(Client* self) // @categories Currency and Points
-{
-	return self->GetLDoNWins();
-}
-
-uint32_t Perl_Client_GetLDoNLosses(Client* self) // @categories Currency and Points
-{
-	return self->GetLDoNLosses();
-}
-
-uint32_t Perl_Client_GetLDoNWinsTheme(Client* self, uint32_t theme) // @categories Currency and Points
-{
-	return self->GetLDoNWinsTheme(theme);
-}
-
-uint32_t Perl_Client_GetLDoNLossesTheme(Client* self, uint32_t theme) // @categories Currency and Points
-{
-	return self->GetLDoNLossesTheme(theme);
-}
-
 EQ::ItemInstance* Perl_Client_GetItemAt(Client* self, uint32 slot) // @categories Inventory and Items
 {
 	return self->GetInv().GetItem(slot);
@@ -1338,16 +1277,6 @@ uint32_t Perl_Client_GetAALevel(Client* self, uint32 aa_skill_id) // @categories
 	return self->GetAA(aa_skill_id);
 }
 
-void Perl_Client_MarkCompassLoc(Client* self, float x, float y, float z) // @categories Adventures and Expeditions
-{
-	self->MarkSingleCompassLoc(x, y, z);
-}
-
-void Perl_Client_ClearCompassMark(Client* self) // @categories Adventures and Expeditions
-{
-	self->MarkSingleCompassLoc(0, 0, 0, 0);
-}
-
 int Perl_Client_GetFreeSpellBookSlot(Client* self) // @categories Spells and Disciplines
 {
 	return self->GetNextAvailableSpellBookSlot();
@@ -1368,71 +1297,6 @@ uint32_t Perl_Client_GetSpellIDByBookSlot(Client* self, int slot_id)
 	return self->GetSpellIDByBookSlot(slot_id);
 }
 
-void Perl_Client_UpdateTaskActivity(Client* self, int task_id, int activity_id, int count) // @categories Tasks and Activities
-{
-	self->UpdateTaskActivity(task_id, activity_id, count);
-}
-
-void Perl_Client_UpdateTaskActivity(Client* self, int task_id, int activity_id, int count, bool ignore_quest_update) // @categories Tasks and Activities
-{
-	self->UpdateTaskActivity(task_id, activity_id, count, ignore_quest_update);
-}
-
-int Perl_Client_GetTaskActivityDoneCount(Client* self, int task_id, int activity_id) // @categories Tasks and Activities
-{
-	return self->GetTaskActivityDoneCountFromTaskID(task_id, activity_id);
-}
-
-void Perl_Client_AssignTask(Client* self, int task_id) // @categories Tasks and Activities
-{
-	self->AssignTask(task_id);
-}
-
-void Perl_Client_AssignTask(Client* self, int task_id, int npc_id) // @categories Tasks and Activities
-{
-	self->AssignTask(task_id, npc_id);
-}
-
-void Perl_Client_AssignTask(Client* self, int task_id, int npc_id, bool enforce_level_requirement) // @categories Tasks and Activities
-{
-	self->AssignTask(task_id, npc_id, enforce_level_requirement);
-}
-
-void Perl_Client_FailTask(Client* self, int task_id) // @categories Tasks and Activities
-{
-	self->FailTask(task_id);
-}
-
-bool Perl_Client_IsTaskCompleted(Client* self, int task_id) // @categories Tasks and Activities
-{
-	return self->IsTaskCompleted(task_id);
-}
-
-bool Perl_Client_IsTaskActive(Client* self, int task_id) // @categories Tasks and Activities
-{
-	return self->IsTaskActive(task_id);
-}
-
-bool Perl_Client_IsTaskActivityActive(Client* self, int task_id, int activity_id) // @categories Tasks and Activities
-{
-	return self->IsTaskActivityActive(task_id, activity_id);
-}
-
-void Perl_Client_LockSharedTask(Client* self, bool lock)
-{
-	return self->LockSharedTask(lock);
-}
-
-void Perl_Client_EndSharedTask(Client* self)
-{
-	return self->EndSharedTask();
-}
-
-void Perl_Client_EndSharedTask(Client* self, bool send_fail)
-{
-	return self->EndSharedTask(send_fail);
-}
-
 uint32_t Perl_Client_GetCorpseCount(Client* self) // @categories Account and Character, Corpse
 {
 	return self->GetCorpseCount();
@@ -1446,16 +1310,6 @@ uint32_t Perl_Client_GetCorpseID(Client* self, uint8 corpse) // @categories Acco
 uint32_t Perl_Client_GetCorpseItemAt(Client* self, uint32 corpse_id, uint16 slot_id) // @categories Inventory and Items, Corpse
 {
 	return self->GetCorpseItemAt(corpse_id, slot_id);
-}
-
-void Perl_Client_AssignToInstance(Client* self, uint16 instance_id) // @categories Adventures and Expeditions
-{
-	self->AssignToInstance(instance_id);
-}
-
-void Perl_Client_RemoveFromInstance(Client* self, uint16 instance_id) // @categories Adventures and Expeditions
-{
-	self->RemoveFromInstance(instance_id);
 }
 
 void Perl_Client_Freeze(Client* self)
@@ -1528,11 +1382,6 @@ void Perl_Client_SendWebLink(Client* self, const char* url) // @categories Scrip
 	self->SendWebLink(url);
 }
 
-int Perl_Client_GetInstanceID(Client* self) // @categories Adventures and Expeditions
-{
-	return self->GetInstanceID();
-}
-
 bool Perl_Client_HasSpellScribed(Client* self, int spell_id) // @categories Spells and Disciplines
 {
 	return self->HasSpellScribed(spell_id);
@@ -1595,12 +1444,6 @@ void Perl_Client_SilentMessage(Client* self, const char* message) // @categories
 void Perl_Client_PlayMP3(Client* self, const char* file) // @categories Script Utility
 {
 	self->PlayMP3(file);
-}
-
-// todo: this is some legacy api for 'cust_inst_players' and can possibly be removed (not related to current expeditions)
-void Perl_Client_ExpeditionMessage(Client* self, int expedition_id, const char* message) // @categories Adventures and Expeditions
-{
-	self->ExpeditionSay(message, expedition_id);
 }
 
 void Perl_Client_SendColoredText(Client* self, uint32 color, std::string msg) // @categories Script Utility
@@ -1748,220 +1591,6 @@ int Perl_Client_GetClientMaxLevel(Client* self)
 	return self->GetClientMaxLevel();
 }
 
-DynamicZoneLocation GetDynamicZoneLocationFromHash(perl::hash table)
-{
-	// dynamic zone helper method, defaults invalid/missing keys to 0
-	perl::scalar zone = table["zone"];
-	uint32_t zone_id = zone.is_string() ? ZoneID(zone.c_str()) : zone.as<uint32_t>();
-
-	float x = table.exists("x") ? table["x"] : 0.0f;
-	float y = table.exists("y") ? table["y"] : 0.0f;
-	float z = table.exists("z") ? table["z"] : 0.0f;
-	float h = table.exists("h") ? table["h"] : 0.0f;
-
-	return { zone_id, x, y, z, h };
-}
-
-Expedition* Perl_Client_CreateExpedition(Client* self, perl::reference table_ref)
-{
-	perl::hash table      = table_ref;
-	perl::hash expedition = table["expedition"];
-	perl::hash instance   = table["instance"];
-
-	perl::scalar zone = instance["zone"];
-	uint32_t version  = instance["version"];
-	uint32_t duration = instance["duration"];
-	uint32_t zone_id  = zone.is_string() ? ZoneID(zone.c_str()) : zone.as<uint32_t>();
-
-	DynamicZone dz{ zone_id, version, duration, DynamicZoneType::Expedition };
-	dz.SetName(expedition["name"]);
-	dz.SetMinPlayers(expedition["min_players"]);
-	dz.SetMaxPlayers(expedition["max_players"]);
-
-	if (table.exists("compass"))
-	{
-		auto compass = GetDynamicZoneLocationFromHash(table["compass"]);
-		dz.SetCompass(compass);
-	}
-
-	if (table.exists("safereturn"))
-	{
-		auto safereturn = GetDynamicZoneLocationFromHash(table["safereturn"]);
-		dz.SetSafeReturn(safereturn);
-	}
-
-	if (table.exists("zonein"))
-	{
-		auto zonein = GetDynamicZoneLocationFromHash(table["zonein"]);
-		dz.SetZoneInLocation(zonein);
-	}
-
-	if (table.exists("switchid"))
-	{
-		dz.SetSwitchID(table["switchid"].as<int>());
-	}
-
-	if (expedition.exists("disable_messages"))
-	{
-		return self->CreateExpedition(dz, expedition["disable_messages"].as<bool>());
-	}
-
-	return self->CreateExpedition(dz);
-}
-
-Expedition* Perl_Client_CreateExpedition(Client* self, std::string zone_name, uint32 version, uint32 duration, std::string expedition_name, uint32 min_players, uint32 max_players)
-{
-	return self->CreateExpedition(zone_name, version, duration, expedition_name, min_players, max_players);
-}
-
-Expedition* Perl_Client_CreateExpedition(Client* self, std::string zone_name, uint32 version, uint32 duration, std::string expedition_name, uint32 min_players, uint32 max_players, bool disable_messages)
-{
-	return self->CreateExpedition(zone_name, version, duration, expedition_name, min_players, max_players, disable_messages);
-}
-
-Expedition* Perl_Client_CreateExpeditionFromTemplate(Client* self, uint32_t dz_template_id)
-{
-	return self->CreateExpeditionFromTemplate(dz_template_id);
-}
-
-void Perl_Client_CreateTaskDynamicZone(Client* self, int task_id, perl::reference table_ref)
-{
-	perl::hash table = table_ref;
-	perl::hash instance = table["instance"];
-
-	perl::scalar zone = instance["zone"];
-	uint32_t version  = instance["version"];
-	uint32_t zone_id  = zone.is_string() ? ZoneID(zone.c_str()) : zone.as<uint32_t>();
-
-	// tasks override dz duration so duration is ignored here
-	DynamicZone dz{ zone_id, version, 0, DynamicZoneType::None };
-
-	if (table.exists("compass"))
-	{
-		auto compass = GetDynamicZoneLocationFromHash(table["compass"]);
-		dz.SetCompass(compass);
-	}
-
-	if (table.exists("safereturn"))
-	{
-		auto safereturn = GetDynamicZoneLocationFromHash(table["safereturn"]);
-		dz.SetSafeReturn(safereturn);
-	}
-
-	if (table.exists("zonein"))
-	{
-		auto zonein = GetDynamicZoneLocationFromHash(table["zonein"]);
-		dz.SetZoneInLocation(zonein);
-	}
-
-	if (table.exists("switchid"))
-	{
-		dz.SetSwitchID(table["switchid"].as<int>());
-	}
-
-	self->CreateTaskDynamicZone(task_id, dz);
-}
-
-Expedition* Perl_Client_GetExpedition(Client* self)
-{
-	return self->GetExpedition();
-}
-
-perl::reference Perl_Client_GetExpeditionLockouts(Client* self)
-{
-	perl::hash lockout_hash;
-
-	auto lockouts = self->GetExpeditionLockouts();
-	for (const auto& lockout : lockouts)
-	{
-		if (!lockout_hash.exists(lockout.GetExpeditionName()))
-		{
-			lockout_hash[lockout.GetExpeditionName()] = perl::reference(perl::hash());
-		}
-		perl::hash events = lockout_hash[lockout.GetExpeditionName()]; // nested
-		events[lockout.GetEventName()] = lockout.GetSecondsRemaining();
-	}
-
-	return perl::reference(lockout_hash);
-}
-
-perl::reference Perl_Client_GetExpeditionLockouts(Client* self, std::string expedition_name)
-{
-	perl::hash event_hash;
-
-	auto lockouts = self->GetExpeditionLockouts(expedition_name);
-	for (const auto& lockout : lockouts)
-	{
-		event_hash[lockout.GetEventName()] = lockout.GetSecondsRemaining();
-	}
-
-	return perl::reference(event_hash);
-}
-
-std::string Perl_Client_GetLockoutExpeditionUUID(Client* self, std::string expedition_name, std::string event_name)
-{
-	auto lockout = self->GetExpeditionLockout(expedition_name, event_name);
-	return lockout ? lockout->GetExpeditionUUID() : std::string{};
-}
-
-void Perl_Client_AddExpeditionLockout(Client* self, std::string expedition_name, std::string event_name, uint32 seconds)
-{
-	self->AddNewExpeditionLockout(expedition_name, event_name, seconds);
-}
-
-void Perl_Client_AddExpeditionLockout(Client* self, std::string expedition_name, std::string event_name, uint32 seconds, std::string uuid)
-{
-	self->AddNewExpeditionLockout(expedition_name, event_name, seconds, uuid);
-}
-
-void Perl_Client_AddExpeditionLockoutDuration(Client* self, std::string expedition_name, std::string event_name, int seconds)
-{
-	self->AddExpeditionLockoutDuration(expedition_name, event_name, seconds, {}, true);
-}
-
-void Perl_Client_AddExpeditionLockoutDuration(Client* self, std::string expedition_name, std::string event_name, int seconds, std::string uuid)
-{
-	self->AddExpeditionLockoutDuration(expedition_name, event_name, seconds, uuid, true);
-}
-
-void Perl_Client_RemoveAllExpeditionLockouts(Client* self)
-{
-	self->RemoveAllExpeditionLockouts({}, true);
-}
-
-void Perl_Client_RemoveAllExpeditionLockouts(Client* self, std::string expedition_name)
-{
-	self->RemoveAllExpeditionLockouts(expedition_name, true);
-}
-
-void Perl_Client_RemoveExpeditionLockout(Client* self, std::string expedition_name, std::string event_name)
-{
-	self->RemoveExpeditionLockout(expedition_name, event_name, true);
-}
-
-bool Perl_Client_HasExpeditionLockout(Client* self, std::string expedition_name, std::string event_name)
-{
-	return self->HasExpeditionLockout(expedition_name, event_name);
-}
-
-void Perl_Client_MovePCDynamicZone(Client* self, perl::scalar zone)
-{
-	uint32_t zone_id = zone.is_string() ? ZoneID(zone.c_str()) : zone.as<uint32_t>();
-	self->MovePCDynamicZone(zone_id);
-}
-
-void Perl_Client_MovePCDynamicZone(Client* self, perl::scalar zone, int zone_version)
-{
-	uint32_t zone_id = zone.is_string() ? ZoneID(zone.c_str()) : zone.as<uint32_t>();
-	self->MovePCDynamicZone(zone_id, zone_version);
-}
-
-void Perl_Client_MovePCDynamicZone(Client* self, perl::scalar zone, int zone_version, bool msg_if_invalid)
-{
-	uint32_t zone_id = zone.is_string() ? ZoneID(zone.c_str()) : zone.as<uint32_t>();
-	self->MovePCDynamicZone(zone_id, zone_version, msg_if_invalid);
-}
-
 void Perl_Client_Fling(Client* self, float value, float target_x, float target_y, float target_z)
 {
 	self->Fling(value, target_x, target_y, target_z);
@@ -2101,19 +1730,9 @@ double Perl_Client_GetAAEXPModifier(Client* self, uint32 zone_id)
 	return self->GetAAEXPModifier(zone_id);
 }
 
-double Perl_Client_GetAAEXPModifier(Client* self, uint32 zone_id, int16 instance_version)
-{
-	return self->GetAAEXPModifier(zone_id, instance_version);
-}
-
 double Perl_Client_GetEXPModifier(Client* self, uint32 zone_id)
 {
 	return self->GetEXPModifier(zone_id);
-}
-
-double Perl_Client_GetEXPModifier(Client* self, uint32 zone_id, int16 instance_version)
-{
-	return self->GetEXPModifier(zone_id, instance_version);
 }
 
 void Perl_Client_SetAAEXPModifier(Client* self, uint32 zone_id, double aa_modifier)
@@ -2121,29 +1740,9 @@ void Perl_Client_SetAAEXPModifier(Client* self, uint32 zone_id, double aa_modifi
 	self->SetAAEXPModifier(zone_id, aa_modifier);
 }
 
-void Perl_Client_SetAAEXPModifier(Client* self, uint32 zone_id, double aa_modifier, int16 instance_version)
-{
-	self->SetAAEXPModifier(zone_id, aa_modifier, instance_version);
-}
-
 void Perl_Client_SetEXPModifier(Client* self, uint32 zone_id, double exp_modifier)
 {
 	self->SetEXPModifier(zone_id, exp_modifier);
-}
-
-void Perl_Client_SetEXPModifier(Client* self, uint32 zone_id, double exp_modifier, int16 instance_version)
-{
-	self->SetEXPModifier(zone_id, exp_modifier, instance_version);
-}
-
-void Perl_Client_AddLDoNLoss(Client* self, uint32 theme_id)
-{
-	self->UpdateLDoNWinLoss(theme_id);
-}
-
-void Perl_Client_AddLDoNWin(Client* self, uint32 theme_id)
-{
-	self->UpdateLDoNWinLoss(theme_id, true);
 }
 
 void Perl_Client_SetHideMe(Client* self, bool hide_me_state)
@@ -2154,11 +1753,6 @@ void Perl_Client_SetHideMe(Client* self, bool hide_me_state)
 void Perl_Client_ResetAllDisciplineTimers(Client* self) // @categories Spells and Disciplines
 {
 	self->ResetAllDisciplineTimers();
-}
-
-void Perl_Client_SendToInstance(Client* self, std::string instance_type, std::string zone_short_name, uint32 instance_version, float x, float y, float z, float heading, std::string instance_identifier, uint32 duration)
-{
-	self->SendToInstance(instance_type, zone_short_name, instance_version, x, y, z, heading, instance_identifier, duration);
 }
 
 int Perl_Client_CountItem(Client* self, uint32 item_id)
@@ -2240,16 +1834,6 @@ void Perl_Client_SummonBaggedItems(Client* self, uint32 bag_item_id, perl::refer
 	}
 
 	self->SummonBaggedItems(bag_item_id, bagged_items);
-}
-
-void Perl_Client_RemoveLDoNLoss(Client* self, uint32 theme_id)
-{
-	self->UpdateLDoNWinLoss(theme_id, false, true);
-}
-
-void Perl_Client_RemoveLDoNWin(Client* self, uint32 theme_id)
-{
-	self->UpdateLDoNWinLoss(theme_id, true, true);
 }
 
 int Perl_Client_GetFreeDisciplineSlot(Client* self) // @categories Spells and Disciplines
@@ -2420,28 +2004,6 @@ int Perl_Client_GetSpellDamage(Client* self)
 	return self->GetSpellDmg();
 }
 
-void Perl_Client_TaskSelector(Client* self, perl::array task_ids)
-{
-	std::vector<int> tasks;
-	for (int i = 0; i < task_ids.size() && i < MAXCHOOSERENTRIES; ++i)
-	{
-		tasks.push_back(task_ids[i]);
-	}
-
-	self->TaskQuestSetSelector(self, tasks, false);
-}
-
-void Perl_Client_TaskSelectorNoCooldown(Client* self, perl::array task_ids)
-{
-	std::vector<int> tasks;
-	for (int i = 0; i < task_ids.size() && i < MAXCHOOSERENTRIES; ++i)
-	{
-		tasks.push_back(task_ids[i]);
-	}
-
-	self->TaskQuestSetSelector(self, tasks, true);
-}
-
 bool Perl_Client_TeleportToPlayerByCharacterID(Client* self, uint32 character_id)
 {
 	return self->GotoPlayer(database.GetCharNameByID(character_id));
@@ -2585,13 +2147,7 @@ void perl_register_client()
 	package.add("AddEXP", (void(*)(Client*, uint32))&Perl_Client_AddEXP);
 	package.add("AddEXP", (void(*)(Client*, uint32, uint8))&Perl_Client_AddEXP);
 	package.add("AddEXP", (void(*)(Client*, uint32, uint8, bool))&Perl_Client_AddEXP);
-	package.add("AddExpeditionLockout", (void(*)(Client*, std::string, std::string, uint32))&Perl_Client_AddExpeditionLockout);
-	package.add("AddExpeditionLockout", (void(*)(Client*, std::string, std::string, uint32, std::string))&Perl_Client_AddExpeditionLockout);
-	package.add("AddExpeditionLockoutDuration", (void(*)(Client*, std::string, std::string, int))&Perl_Client_AddExpeditionLockoutDuration);
-	package.add("AddExpeditionLockoutDuration", (void(*)(Client*, std::string, std::string, int, std::string))&Perl_Client_AddExpeditionLockoutDuration);
 	package.add("AddItem", &Perl_Client_AddItem);
-	package.add("AddLDoNLoss", &Perl_Client_AddLDoNLoss);
-	package.add("AddLDoNWin", &Perl_Client_AddLDoNWin);
 	package.add("AddLevelBasedExp", (void(*)(Client*, uint8))&Perl_Client_AddLevelBasedExp);
 	package.add("AddLevelBasedExp", (void(*)(Client*, uint8, uint8))&Perl_Client_AddLevelBasedExp);
 	package.add("AddLevelBasedExp", (void(*)(Client*, uint8, uint8, bool))&Perl_Client_AddLevelBasedExp);
@@ -2602,10 +2158,6 @@ void perl_register_client()
 	package.add("AddPVPPoints", &Perl_Client_AddPVPPoints);
 	package.add("AddSkill", &Perl_Client_AddSkill);
 	package.add("Admin", &Perl_Client_Admin);
-	package.add("AssignTask", (void(*)(Client*, int))&Perl_Client_AssignTask);
-	package.add("AssignTask", (void(*)(Client*, int, int))&Perl_Client_AssignTask);
-	package.add("AssignTask", (void(*)(Client*, int, int, bool))&Perl_Client_AssignTask);
-	package.add("AssignToInstance", &Perl_Client_AssignToInstance);
 	package.add("AutoSplitEnabled", &Perl_Client_AutoSplitEnabled);
 	package.add("BreakInvis", &Perl_Client_BreakInvis);
 	package.add("CalcEXP", &Perl_Client_CalcEXP);
@@ -2619,18 +2171,12 @@ void perl_register_client()
 	package.add("CheckIncreaseSkill", (bool(*)(Client*, int))&Perl_Client_CheckIncreaseSkill);
 	package.add("CheckIncreaseSkill", (bool(*)(Client*, int, int))&Perl_Client_CheckIncreaseSkill);
 	package.add("CheckSpecializeIncrease", &Perl_Client_CheckSpecializeIncrease);
-	package.add("ClearCompassMark", &Perl_Client_ClearCompassMark);
 	package.add("ClearPEQZoneFlag", &Perl_Client_ClearPEQZoneFlag);
 	package.add("ClearZoneFlag", &Perl_Client_ClearZoneFlag);
 	package.add("Connected", &Perl_Client_Connected);
 	package.add("CountAugmentEquippedByID", &Perl_Client_CountAugmentEquippedByID);
 	package.add("CountItem", &Perl_Client_CountItem);
 	package.add("CountItemEquippedByID", &Perl_Client_CountItemEquippedByID);
-	package.add("CreateExpedition", (Expedition*(*)(Client*, perl::reference))&Perl_Client_CreateExpedition);
-	package.add("CreateExpedition", (Expedition*(*)(Client*, std::string, uint32, uint32, std::string, uint32, uint32))&Perl_Client_CreateExpedition);
-	package.add("CreateExpedition", (Expedition*(*)(Client*, std::string, uint32, uint32, std::string, uint32, uint32, bool))&Perl_Client_CreateExpedition);
-	package.add("CreateExpeditionFromTemplate", &Perl_Client_CreateExpeditionFromTemplate);
-	package.add("CreateTaskDynamicZone", &Perl_Client_CreateTaskDynamicZone);
 	package.add("DecreaseByID", &Perl_Client_DecreaseByID);
 	package.add("DeleteItemInInventory", (void(*)(Client*, int16))&Perl_Client_DeleteItemInInventory);
 	package.add("DeleteItemInInventory", (void(*)(Client*, int16, int16))&Perl_Client_DeleteItemInInventory);
@@ -2642,11 +2188,7 @@ void perl_register_client()
 	package.add("Duck", &Perl_Client_Duck);
 	package.add("DyeArmorBySlot", (void(*)(Client*, uint8, uint8, uint8, uint8))&Perl_Client_DyeArmorBySlot);
 	package.add("DyeArmorBySlot", (void(*)(Client*, uint8, uint8, uint8, uint8, uint8))&Perl_Client_DyeArmorBySlot);
-	package.add("EndSharedTask", (void(*)(Client*))&Perl_Client_EndSharedTask);
-	package.add("EndSharedTask", (void(*)(Client*, bool))&Perl_Client_EndSharedTask);
 	package.add("Escape", &Perl_Client_Escape);
-	package.add("ExpeditionMessage", &Perl_Client_ExpeditionMessage);
-	package.add("FailTask", &Perl_Client_FailTask);
 	package.add("FindEmptyMemSlot", &Perl_Client_FindEmptyMemSlot);
 	package.add("FindMemmedSpellBySlot", &Perl_Client_FindMemmedSpellBySlot);
 	package.add("FindMemmedSpellBySpellID", &Perl_Client_FindMemmedSpellBySpellID);
@@ -2723,9 +2265,6 @@ void perl_register_client()
 	package.add("GetEbonCrystals", &Perl_Client_GetEbonCrystals);
 	package.add("GetEndurance", &Perl_Client_GetEndurance);
 	package.add("GetEnduranceRatio", &Perl_Client_GetEnduranceRatio);
-	package.add("GetExpedition", &Perl_Client_GetExpedition);
-	package.add("GetExpeditionLockouts", (perl::reference(*)(Client*))&Perl_Client_GetExpeditionLockouts);
-	package.add("GetExpeditionLockouts", (perl::reference(*)(Client*, std::string))&Perl_Client_GetExpeditionLockouts);
 	package.add("GetFace", &Perl_Client_GetFace);
 	package.add("GetFactionLevel", &Perl_Client_GetFactionLevel);
 	package.add("GetFeigned", &Perl_Client_GetFeigned);
@@ -2743,24 +2282,17 @@ void perl_register_client()
 	package.add("GetIP", &Perl_Client_GetIP);
 	package.add("GetIPExemption", &Perl_Client_GetIPExemption);
 	package.add("GetIPString", &Perl_Client_GetIPString);
-	package.add("GetInstanceID", &Perl_Client_GetInstanceID);
 	package.add("GetInstrumentMod", &Perl_Client_GetInstrumentMod);
 	package.add("GetInventory", &Perl_Client_GetInventory);
 	package.add("GetInvulnerableEnvironmentDamage", &Perl_Client_GetInvulnerableEnvironmentDamage);
 	package.add("GetItemAt", &Perl_Client_GetItemAt);
 	package.add("GetItemIDAt", &Perl_Client_GetItemIDAt);
 	package.add("GetItemInInventory", &Perl_Client_GetItemInInventory);
-	package.add("GetLDoNLosses", &Perl_Client_GetLDoNLosses);
-	package.add("GetLDoNLossesTheme", &Perl_Client_GetLDoNLossesTheme);
-	package.add("GetLDoNPointsTheme", &Perl_Client_GetLDoNPointsTheme);
-	package.add("GetLDoNWins", &Perl_Client_GetLDoNWins);
-	package.add("GetLDoNWinsTheme", &Perl_Client_GetLDoNWinsTheme);
 	package.add("GetLanguageSkill", &Perl_Client_GetLanguageSkill);
 	package.add("GetLearnableDisciplines", (perl::array(*)(Client*))&Perl_Client_GetLearnableDisciplines);
 	package.add("GetLearnableDisciplines", (perl::array(*)(Client*, uint8))&Perl_Client_GetLearnableDisciplines);
 	package.add("GetLearnableDisciplines", (perl::array(*)(Client*, uint8, uint8))&Perl_Client_GetLearnableDisciplines);
 	package.add("GetLearnedDisciplines", &Perl_Client_GetLearnedDisciplines);
-	package.add("GetLockoutExpeditionUUID", &Perl_Client_GetLockoutExpeditionUUID);
 	package.add("GetMaxEndurance", &Perl_Client_GetMaxEndurance);
 	package.add("GetMemmedSpells", &Perl_Client_GetMemmedSpells);
 	package.add("GetModCharacterFactionLevel", &Perl_Client_GetModCharacterFactionLevel);
@@ -2787,7 +2319,6 @@ void perl_register_client()
 	package.add("GetTargetRingX", &Perl_Client_GetTargetRingX);
 	package.add("GetTargetRingY", &Perl_Client_GetTargetRingY);
 	package.add("GetTargetRingZ", &Perl_Client_GetTargetRingZ);
-	package.add("GetTaskActivityDoneCount", &Perl_Client_GetTaskActivityDoneCount);
 	package.add("GetThirst", &Perl_Client_GetThirst);
 	package.add("GetTotalSecondsPlayed", &Perl_Client_GetTotalSecondsPlayed);
 	package.add("GetWeight", &Perl_Client_GetWeight);
@@ -2798,7 +2329,6 @@ void perl_register_client()
 	package.add("GuildRank", &Perl_Client_GuildRank);
 	package.add("HasAugmentEquippedByID", &Perl_Client_HasAugmentEquippedByID);
 	package.add("HasDisciplineLearned", &Perl_Client_HasDisciplineLearned);
-	package.add("HasExpeditionLockout", &Perl_Client_HasExpeditionLockout);
 	package.add("HasItemEquippedByID", &Perl_Client_HasItemEquippedByID);
 	package.add("HasPEQZoneFlag", &Perl_Client_HasPEQZoneFlag);
 	package.add("HasRecipeLearned", &Perl_Client_HasRecipeLearned);
@@ -2822,9 +2352,6 @@ void perl_register_client()
 	package.add("IsRaidGrouped", &Perl_Client_IsRaidGrouped);
 	package.add("IsSitting", &Perl_Client_IsSitting);
 	package.add("IsStanding", &Perl_Client_IsStanding);
-	package.add("IsTaskActive", &Perl_Client_IsTaskActive);
-	package.add("IsTaskActivityActive", &Perl_Client_IsTaskActivityActive);
-	package.add("IsTaskCompleted", &Perl_Client_IsTaskCompleted);
 	package.add("KeyRingAdd", &Perl_Client_KeyRingAdd);
 	package.add("KeyRingCheck", &Perl_Client_KeyRingCheck);
 	package.add("Kick", &Perl_Client_Kick);
@@ -2833,8 +2360,6 @@ void perl_register_client()
 	package.add("LeaveGroup", &Perl_Client_LeaveGroup);
 	package.add("LoadPEQZoneFlags", &Perl_Client_LoadPEQZoneFlags);
 	package.add("LoadZoneFlags", &Perl_Client_LoadZoneFlags);
-	package.add("LockSharedTask", &Perl_Client_LockSharedTask);
-	package.add("MarkCompassLoc", &Perl_Client_MarkCompassLoc);
 	package.add("Marquee", (void(*)(Client*, uint32, std::string))&Perl_Client_SendMarqueeMessage);
 	package.add("Marquee", (void(*)(Client*, uint32, std::string, uint32))&Perl_Client_SendMarqueeMessage);
 	package.add("Marquee", (void(*)(Client*, uint32, uint32, uint32, uint32, uint32, std::string))&Perl_Client_SendMarqueeMessage);
@@ -2845,15 +2370,8 @@ void perl_register_client()
 	package.add("MemSpell", (void(*)(Client*, uint16, int, bool))&Perl_Client_MemSpell);
 	package.add("MemmedCount", &Perl_Client_MemmedCount);
 	package.add("MovePC", &Perl_Client_MovePC);
-	package.add("MovePCDynamicZone", (void(*)(Client*, perl::scalar))&Perl_Client_MovePCDynamicZone);
-	package.add("MovePCDynamicZone", (void(*)(Client*, perl::scalar, int))&Perl_Client_MovePCDynamicZone);
-	package.add("MovePCDynamicZone", (void(*)(Client*, perl::scalar, int, bool))&Perl_Client_MovePCDynamicZone);
-	package.add("MovePCInstance", &Perl_Client_MovePCInstance);
 	package.add("MoveZone", &Perl_Client_MoveZone);
 	package.add("MoveZoneGroup", &Perl_Client_MoveZoneGroup);
-	package.add("MoveZoneInstance", &Perl_Client_MoveZoneInstance);
-	package.add("MoveZoneInstanceGroup", &Perl_Client_MoveZoneInstanceGroup);
-	package.add("MoveZoneInstanceRaid", &Perl_Client_MoveZoneInstanceRaid);
 	package.add("MoveZoneRaid", &Perl_Client_MoveZoneRaid);
 	package.add("NPCSpawn", (void(*)(Client*, NPC*, const char*))&Perl_Client_NPCSpawn);
 	package.add("NPCSpawn", (void(*)(Client*, NPC*, const char*, uint32))&Perl_Client_NPCSpawn);
@@ -2881,14 +2399,8 @@ void perl_register_client()
 	package.add("ReadBook", &Perl_Client_ReadBook);
 	package.add("ReadBookByName", &Perl_Client_ReadBookByName);
 	package.add("RefundAA", &Perl_Client_RefundAA);
-	package.add("RemoveAllExpeditionLockouts", (void(*)(Client*))&Perl_Client_RemoveAllExpeditionLockouts);
-	package.add("RemoveAllExpeditionLockouts", (void(*)(Client*, std::string))&Perl_Client_RemoveAllExpeditionLockouts);
-	package.add("RemoveExpeditionLockout", &Perl_Client_RemoveExpeditionLockout);
-	package.add("RemoveFromInstance", &Perl_Client_RemoveFromInstance);
 	package.add("RemoveItem", (void(*)(Client*, uint32))&Perl_Client_RemoveItem);
 	package.add("RemoveItem", (void(*)(Client*, uint32, uint32))&Perl_Client_RemoveItem);
-	package.add("RemoveLDoNLoss", &Perl_Client_RemoveLDoNLoss);
-	package.add("RemoveLDoNWin", &Perl_Client_RemoveLDoNWin);
 	package.add("RemoveNoRent", &Perl_Client_RemoveNoRent);
 	package.add("ResetAA", &Perl_Client_ResetAA);
 	package.add("ResetAllDisciplineTimers", &Perl_Client_ResetAllDisciplineTimers);
@@ -2914,8 +2426,6 @@ void perl_register_client()
 	package.add("SendSound", &Perl_Client_SendSound);
 	package.add("SendSpellAnim", &Perl_Client_SendSpellAnim);
 	package.add("SendTargetCommand", &Perl_Client_SendTargetCommand);
-	package.add("SendToGuildHall", &Perl_Client_SendToGuildHall);
-	package.add("SendToInstance", &Perl_Client_SendToInstance);
 	package.add("SendWebLink", &Perl_Client_SendWebLink);
 	package.add("SendZoneFlagInfo", &Perl_Client_SendZoneFlagInfo);
 	package.add("SetAAEXPModifier", (void(*)(Client*, uint32, double))&Perl_Client_SetAAEXPModifier);
@@ -2934,11 +2444,10 @@ void perl_register_client()
 	package.add("SetBecomeNPCLevel", &Perl_Client_SetBecomeNPCLevel);
 	package.add("SetBindPoint", (void(*)(Client*))&Perl_Client_SetBindPoint);
 	package.add("SetBindPoint", (void(*)(Client*, int))&Perl_Client_SetBindPoint);
-	package.add("SetBindPoint", (void(*)(Client*, int, int))&Perl_Client_SetBindPoint);
-	package.add("SetBindPoint", (void(*)(Client*, int, int, float))&Perl_Client_SetBindPoint);
-	package.add("SetBindPoint", (void(*)(Client*, int, int, float, float))&Perl_Client_SetBindPoint);
-	package.add("SetBindPoint", (void(*)(Client*, int, int, float, float, float))&Perl_Client_SetBindPoint);
-	package.add("SetBindPoint", (void(*)(Client*, int, int, float, float, float, float))&Perl_Client_SetBindPoint);
+	package.add("SetBindPoint", (void(*)(Client*, int, float))&Perl_Client_SetBindPoint);
+	package.add("SetBindPoint", (void(*)(Client*, int, float, float))&Perl_Client_SetBindPoint);
+	package.add("SetBindPoint", (void(*)(Client*, int, float, float, float))&Perl_Client_SetBindPoint);
+	package.add("SetBindPoint", (void(*)(Client*, int, float, float, float, float))&Perl_Client_SetBindPoint);
 
 #ifdef BOTS
 
@@ -3018,8 +2527,6 @@ void perl_register_client()
 	package.add("TeleportGroupToPlayerByName", &Perl_Client_TeleportGroupToPlayerByName);
 	package.add("TeleportRaidToPlayerByCharID", &Perl_Client_TeleportRaidToPlayerByCharacterID);
 	package.add("TeleportRaidToPlayerByName", &Perl_Client_TeleportRaidToPlayerByName);
-	package.add("TaskSelector", &Perl_Client_TaskSelector);
-	package.add("TaskSelectorNoCooldown", &Perl_Client_TaskSelectorNoCooldown);
 	package.add("Thirsty", &Perl_Client_Thirsty);
 	package.add("TrainDiscBySpellID", &Perl_Client_TrainDiscBySpellID);
 	package.add("UnFreeze", &Perl_Client_UnFreeze);
@@ -3044,9 +2551,6 @@ void perl_register_client()
 	package.add("UpdateAdmin", (void(*)(Client*))&Perl_Client_UpdateAdmin);
 	package.add("UpdateAdmin", (void(*)(Client*, bool))&Perl_Client_UpdateAdmin);
 	package.add("UpdateGroupAAs", &Perl_Client_UpdateGroupAAs);
-	package.add("UpdateLDoNPoints", &Perl_Client_UpdateLDoNPoints);
-	package.add("UpdateTaskActivity", (void(*)(Client*, int, int, int))&Perl_Client_UpdateTaskActivity);
-	package.add("UpdateTaskActivity", (void(*)(Client*, int, int, int, bool))&Perl_Client_UpdateTaskActivity);
 	package.add("UpdateWho", (void(*)(Client*))&Perl_Client_UpdateWho);
 	package.add("UpdateWho", (void(*)(Client*, uint8))&Perl_Client_UpdateWho);
 	package.add("UseDiscipline", &Perl_Client_UseDiscipline);

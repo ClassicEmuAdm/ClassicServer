@@ -32,12 +32,11 @@ void command_zcolor(Client *c, const Seperator *sep)
 	if (permanent) {		
 		auto query = fmt::format(
 			"UPDATE zone SET fog_red = {}, fog_green = {}, fog_blue = {} "
-			"WHERE zoneidnumber = {} AND version = {}",
+			"WHERE zoneidnumber = {}",
 			red,
 			green,
 			blue,
-			zone->GetZoneID(),
-			zone->GetInstanceVersion()
+			zone->GetZoneID()
 		);
 		database.QueryDatabase(query);
 	}

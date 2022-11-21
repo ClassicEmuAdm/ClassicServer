@@ -443,14 +443,13 @@ void EntityList::ClearTrapPointers()
 }
 
 
-bool ZoneDatabase::LoadTraps(const char* zonename, int16 version) {
+bool ZoneDatabase::LoadTraps(const char* zonename) {
 
 	std::string query = StringFormat(
 		"SELECT id, x, y, z, effect, effectvalue, effectvalue2, skill, "
 		"maxzdiff, radius, chance, message, respawn_time, respawn_var, level, "
-		"`group`, triggered_number, despawn_when_triggered, undetectable  FROM traps WHERE zone='%s' AND version=%u %s",
+		"`group`, triggered_number, despawn_when_triggered, undetectable  FROM traps WHERE zone='%s' %s",
 		zonename,
-		version,
 		ContentFilterCriteria::apply().c_str()
 	);
 

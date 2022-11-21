@@ -21,7 +21,6 @@
 #include "../common/rulesys.h"
 #include "../common/strings.h"
 
-#include "expedition.h"
 #include "queryserv.h"
 #include "quest_parser_collection.h"
 #include "string_ids.h"
@@ -59,7 +58,6 @@ void Client::Handle_OP_ZoneChange(const EQApplicationPacket *app) {
 	auto* zc = (ZoneChange_Struct*)app->pBuffer;
 
 	uint16 target_zone_id = 0;
-	auto target_instance_id = zc->instanceID;
 	ZonePoint* zone_point = nullptr;
 
 	//figure out where they are going.
@@ -79,11 +77,9 @@ void Client::Handle_OP_ZoneChange(const EQApplicationPacket *app) {
 				break;
 			case GateToBindPoint:
 				target_zone_id = m_pp.binds[0].zone_id;
-				target_instance_id = m_pp.binds[0].instance_id;
 				break;
 			case ZoneToBindPoint:
 				target_zone_id = m_pp.binds[0].zone_id;
-				target_instance_id = m_pp.binds[0].instance_id;
 				break;
 			case ZoneSolicited: //we told the client to zone somewhere, so we know where they are going.
 				target_zone_id = zonesummon_id;
@@ -94,7 +90,6 @@ void Client::Handle_OP_ZoneChange(const EQApplicationPacket *app) {
 					//we found a zone point, which is a reasonable distance away
 					//assume that is the one were going with.
 					target_zone_id = zone_point->target_zone_id;
-					target_instance_id = zone_point->target_zone_instance;
 				} else {
 					//unable to find a zone point... is there anything else
 					//that can be a valid un-zolicited zone request?
@@ -139,34 +134,6 @@ void Client::Handle_OP_ZoneChange(const EQApplicationPacket *app) {
 		}
 	}
 
-	if (target_instance_id) {
-		//make sure we are in it and it's unexpired.
-		if (!database.VerifyInstanceAlive(target_instance_id, CharacterID())) {
-			Message(
-				Chat::Red,
-				fmt::format(
-					"Instance ID {} was expired or you were not a member of it.",
-					target_instance_id
-				).c_str()
-			);
-			SendZoneCancel(zc);
-			return;
-		}
-
-		if (!database.VerifyZoneInstance(target_zone_id, target_instance_id)) {
-			Message(
-				Chat::Red,
-				fmt::format(
-					"Instance ID was {}, this does not match Zone ID {}.",
-					target_instance_id,
-					target_zone_id
-				).c_str()
-			);
-			SendZoneCancel(zc);
-			return;
-		}
-	}
-
 	/* Check for Valid Zone */
 	auto* target_zone_name = ZoneName(target_zone_id);
 	if (!target_zone_name) {
@@ -177,10 +144,8 @@ void Client::Handle_OP_ZoneChange(const EQApplicationPacket *app) {
 		return;
 	}
 
-	auto target_instance_version = database.GetInstanceVersion(target_instance_id);
 	auto zone_data = GetZoneVersionWithFallback(
-		ZoneID(target_zone_name),
-		target_instance_version
+		ZoneID(target_zone_name)
 	);
 	if (!zone_data) {
 		Message(Chat::Red, "Invalid target zone while getting safe points.");
@@ -203,13 +168,9 @@ void Client::Handle_OP_ZoneChange(const EQApplicationPacket *app) {
 	min_level    = zone_data->min_level;
 
 	const auto& export_string = fmt::format(
-		"{} {} {} {} {} {}",
+		"{} {}",
 		zone->GetZoneID(),
-		zone->GetInstanceID(),
-		zone->GetInstanceVersion(),
-		target_zone_id,
-		target_instance_id,
-		target_instance_version
+		target_zone_id
 	);
 
 	if (parse->EventPlayer(EVENT_ZONE, this, export_string, 0) != 0) {
@@ -353,7 +314,7 @@ void Client::Handle_OP_ZoneChange(const EQApplicationPacket *app) {
 
 	if (myerror == 1) {
 		//we have successfully zoned
-		DoZoneSuccess(zc, target_zone_id, target_instance_id, target_x, target_y, target_z, target_heading, ignore_restrictions);
+		DoZoneSuccess(zc, target_zone_id, target_x, target_y, target_z, target_heading, ignore_restrictions);
 	} else {
 		LogError("Zoning [{}]: Rules prevent this char from zoning into [{}]", GetName(), target_zone_name);
 		SendZoneError(zc, myerror);
@@ -402,7 +363,7 @@ void Client::SendZoneError(ZoneChange_Struct *zc, int8 err)
 	m_lock_save_position = false;
 }
 
-void Client::DoZoneSuccess(ZoneChange_Struct *zc, uint16 zone_id, uint32 instance_id, float dest_x, float dest_y, float dest_z, float dest_h, int8 ignore_r) {
+void Client::DoZoneSuccess(ZoneChange_Struct *zc, uint16 zone_id, float dest_x, float dest_y, float dest_z, float dest_h, int8 ignore_r) {
 	//this is called once the client is fully allowed to zone here
 	//it takes care of all the activities which occur when a client zones out
 
@@ -410,7 +371,7 @@ void Client::DoZoneSuccess(ZoneChange_Struct *zc, uint16 zone_id, uint32 instanc
 
 	/* QS: PlayerLogZone */
 	if (RuleB(QueryServ, PlayerLogZone)){
-		std::string event_desc = StringFormat("Zoning :: zoneid:%u instid:%u x:%4.2f y:%4.2f z:%4.2f h:%4.2f zonemode:%d from zoneid:%u instid:%i", zone_id, instance_id, dest_x, dest_y, dest_z, dest_h, zone_mode, GetZoneID(), GetInstanceID());
+		std::string event_desc = StringFormat("Zoning :: zoneid:%u x:%4.2f y:%4.2f z:%4.2f h:%4.2f zonemode:%d from zoneid:%u", zone_id, dest_x, dest_y, dest_z, dest_h, zone_mode, GetZoneID());
 		QServ->PlayerLogEvent(Player_Log_Zoning, CharacterID(), event_desc);
 	}
 
@@ -420,22 +381,11 @@ void Client::DoZoneSuccess(ZoneChange_Struct *zc, uint16 zone_id, uint32 instanc
 	if(GetPet())
 		entity_list.RemoveFromHateLists(GetPet());
 
-	if (GetPendingExpeditionInviteID() != 0)
-	{
-		// live re-invites if client zoned with a pending invite, save pending invite info in world
-		auto expedition = Expedition::FindCachedExpeditionByID(GetPendingExpeditionInviteID());
-		if (expedition)
-		{
-			expedition->SendWorldPendingInvite(m_pending_expedition_invite, GetName());
-		}
-	}
-
 	LogInfo(
-		"Zoning [{}] to: [{}] ([{}]) - ([{}]) x [{}] y [{}] z [{}]",
+		"Zoning [{}] to: [{}] ([{}]) x [{}] y [{}] z [{}]",
 		m_pp.name,
 		ZoneName(zone_id),
 		zone_id,
-		instance_id,
 		dest_x,
 		dest_y,
 		dest_z
@@ -449,21 +399,19 @@ void Client::DoZoneSuccess(ZoneChange_Struct *zc, uint16 zone_id, uint32 instanc
 	m_Position.w = dest_h; // Cripp: fix for zone heading
 	m_pp.heading = dest_h;
 	m_pp.zone_id = zone_id;
-	m_pp.zoneInstance = instance_id;
 
 	//Force a save so its waiting for them when they zone
 	Save(2);
 
 	m_lock_save_position = true;
 
-	if (zone_id == zone->GetZoneID() && instance_id == zone->GetInstanceID()) {
+	if (zone_id == zone->GetZoneID()) {
 		// No need to ask worldserver if we're zoning to ourselves (most
 		// likely to a bind point), also fixes a bug since the default response was failure
 		auto outapp = new EQApplicationPacket(OP_ZoneChange, sizeof(ZoneChange_Struct));
 		ZoneChange_Struct* zc2 = (ZoneChange_Struct*) outapp->pBuffer;
 		strcpy(zc2->char_name, GetName());
 		zc2->zoneID = zone_id;
-		zc2->instanceID = instance_id;
 		zc2->success = 1;
 		outapp->priority = 6;
 		FastQueuePacket(&outapp);
@@ -474,9 +422,7 @@ void Client::DoZoneSuccess(ZoneChange_Struct *zc, uint16 zone_id, uint32 instanc
 		ZoneToZone_Struct *ztz = (ZoneToZone_Struct *)pack->pBuffer;
 		ztz->response = 0;
 		ztz->current_zone_id = zone->GetZoneID();
-		ztz->current_instance_id = zone->GetInstanceID();
 		ztz->requested_zone_id = zone_id;
-		ztz->requested_instance_id = instance_id;
 		ztz->admin = admin;
 		ztz->ignorerestrictions = ignore_r;
 		strcpy(ztz->name, GetName());
@@ -496,24 +442,20 @@ void Client::DoZoneSuccess(ZoneChange_Struct *zc, uint16 zone_id, uint32 instanc
 }
 
 void Client::MovePC(const char* zonename, float x, float y, float z, float heading, uint8 ignorerestrictions, ZoneMode zm) {
-	ProcessMovePC(ZoneID(zonename), 0, x, y, z, heading, ignorerestrictions, zm);
+	ProcessMovePC(ZoneID(zonename), x, y, z, heading, ignorerestrictions, zm);
 }
 
 //designed for in zone moving
 void Client::MovePC(float x, float y, float z, float heading, uint8 ignorerestrictions, ZoneMode zm) {
-	ProcessMovePC(zone->GetZoneID(), zone->GetInstanceID(), x, y, z, heading, ignorerestrictions, zm);
+	ProcessMovePC(zone->GetZoneID(), x, y, z, heading, ignorerestrictions, zm);
 }
 
 void Client::MovePC(uint32 zoneID, float x, float y, float z, float heading, uint8 ignorerestrictions, ZoneMode zm) {
-	ProcessMovePC(zoneID, 0, x, y, z, heading, ignorerestrictions, zm);
-}
-
-void Client::MovePC(uint32 zoneID, uint32 instanceID, float x, float y, float z, float heading, uint8 ignorerestrictions, ZoneMode zm){
-	ProcessMovePC(zoneID, instanceID, x, y, z, heading, ignorerestrictions, zm);
+	ProcessMovePC(zoneID, x, y, z, heading, ignorerestrictions, zm);
 }
 
 void Client::MoveZone(const char *zone_short_name) {
-	ProcessMovePC(ZoneID(zone_short_name), 0, 0.0f, 0.0f, 0.0f, 0.0f, 3, ZoneToSafeCoords);
+	ProcessMovePC(ZoneID(zone_short_name), 0.0f, 0.0f, 0.0f, 0.0f, 3, ZoneToSafeCoords);
 }
 
 void Client::MoveZoneGroup(const char *zone_short_name) {
@@ -544,42 +486,7 @@ void Client::MoveZoneRaid(const char *zone_short_name) {
 	}
 }
 
-void Client::MoveZoneInstance(uint16 instance_id) {
-	if (!database.CharacterInInstanceGroup(instance_id, CharacterID())) {
-		database.AddClientToInstance(instance_id, CharacterID());
-	}
-	ProcessMovePC(database.ZoneIDFromInstanceID(instance_id), instance_id, 0.0f, 0.0f, 0.0f, 0.0f, 3, ZoneToSafeCoords);
-}
-
-void Client::MoveZoneInstanceGroup(uint16 instance_id) {
-	if (!GetGroup()) {
-		MoveZoneInstance(instance_id);
-	} else {
-		auto client_group = GetGroup();
-		for (int member_index = 0; member_index < MAX_GROUP_MEMBERS; member_index++) {
-			if (client_group->members[member_index] && client_group->members[member_index]->IsClient()) {
-				auto group_member = client_group->members[member_index]->CastToClient();
-				group_member->MoveZoneInstance(instance_id);
-			}
-		}
-	}
-}
-
-void Client::MoveZoneInstanceRaid(uint16 instance_id) {
-	if (!GetRaid()) {
-		MoveZoneInstance(instance_id);
-	} else {
-		auto client_raid = GetRaid();
-		for (int member_index = 0; member_index < MAX_RAID_MEMBERS; member_index++) {
-			if (client_raid->members[member_index].member && client_raid->members[member_index].member->IsClient()) {
-				auto raid_member = client_raid->members[member_index].member->CastToClient();
-				raid_member->MoveZoneInstance(instance_id);
-			}
-		}
-	}
-}
-
-void Client::ProcessMovePC(uint32 zoneID, uint32 instance_id, float x, float y, float z, float heading, uint8 ignorerestrictions, ZoneMode zm)
+void Client::ProcessMovePC(uint32 zoneID, float x, float y, float z, float heading, uint8 ignorerestrictions, ZoneMode zm)
 {
 	// From what I have read, dragged corpses should stay with the player for Intra-zone summons etc, but we can implement that later.
 	ClearDraggedCorpses();
@@ -587,7 +494,7 @@ void Client::ProcessMovePC(uint32 zoneID, uint32 instance_id, float x, float y, 
 	if(zoneID == 0)
 		zoneID = zone->GetZoneID();
 
-	if(zoneID == zone->GetZoneID() && instance_id == zone->GetInstanceID()) {
+	if(zoneID == zone->GetZoneID()) {
 		// TODO: Determine if this condition is necessary.
 		if(IsAIControlled()) {
 			GMMove(x, y, z);
@@ -606,29 +513,29 @@ void Client::ProcessMovePC(uint32 zoneID, uint32 instance_id, float x, float y, 
 
 	switch(zm) {
 		case GateToBindPoint:
-			ZonePC(zoneID, instance_id, x, y, z, heading, ignorerestrictions, zm);
+			ZonePC(zoneID, x, y, z, heading, ignorerestrictions, zm);
 			break;
 		case EvacToSafeCoords:
 		case ZoneToSafeCoords:
-			ZonePC(zoneID, instance_id, x, y, z, heading, ignorerestrictions, zm);
+			ZonePC(zoneID, x, y, z, heading, ignorerestrictions, zm);
 			break;
 		case GMSummon:
 			Message(Chat::Yellow, "You have been summoned by a GM!");
-			ZonePC(zoneID, instance_id, x, y, z, heading, ignorerestrictions, zm);
+			ZonePC(zoneID, x, y, z, heading, ignorerestrictions, zm);
 			break;
 		case ZoneToBindPoint:
-			ZonePC(zoneID, instance_id, x, y, z, heading, ignorerestrictions, zm);
+			ZonePC(zoneID, x, y, z, heading, ignorerestrictions, zm);
 			break;
 		case ZoneSolicited:
-			ZonePC(zoneID, instance_id, x, y, z, heading, ignorerestrictions, zm);
+			ZonePC(zoneID, x, y, z, heading, ignorerestrictions, zm);
 			break;
 		case SummonPC:
 			Message(Chat::Yellow, "You have been summoned!");
-			ZonePC(zoneID, instance_id, x, y, z, heading, ignorerestrictions, zm);
+			ZonePC(zoneID, x, y, z, heading, ignorerestrictions, zm);
 			break;
 		case Rewind:
 			Message(Chat::Yellow, "Rewinding to previous location.");
-			ZonePC(zoneID, instance_id, x, y, z, heading, ignorerestrictions, zm);
+			ZonePC(zoneID, x, y, z, heading, ignorerestrictions, zm);
 			break;
 		default:
 			LogError("Client::ProcessMovePC received a reguest to perform an unsupported client zone operation");
@@ -636,7 +543,7 @@ void Client::ProcessMovePC(uint32 zoneID, uint32 instance_id, float x, float y, 
 	}
 }
 
-void Client::ZonePC(uint32 zoneID, uint32 instance_id, float x, float y, float z, float heading, uint8 ignorerestrictions, ZoneMode zm) {
+void Client::ZonePC(uint32 zoneID, float x, float y, float z, float heading, uint8 ignorerestrictions, ZoneMode zm) {
 	bool ReadyToZone = true;
 	int iZoneNameLength = 0;
 	const char*	pShortZoneName = nullptr;
@@ -644,7 +551,7 @@ void Client::ZonePC(uint32 zoneID, uint32 instance_id, float x, float y, float z
 
 	pShortZoneName = ZoneName(zoneID);
 
-	auto zd = GetZoneVersionWithFallback(zoneID, zone->GetInstanceVersion());
+	auto zd = GetZoneVersionWithFallback(zoneID);
 	if (zd) {
 		pZoneName = strcpy(new char[strlen(zd->long_name.c_str()) + 1], zd->long_name.c_str());
 	}
@@ -785,7 +692,6 @@ void Client::ZonePC(uint32 zoneID, uint32 instance_id, float x, float y, float z
 			gmg->y = y;
 			gmg->z = z;
 			gmg->heading = heading;
-			gmg->instance_id = instance_id;
 			gmg->type = 0x01;				//an observed value, not sure of meaning
 
 			outapp->priority = 6;
@@ -815,7 +721,6 @@ void Client::ZonePC(uint32 zoneID, uint32 instance_id, float x, float y, float z
 			gmg->y = y;
 			gmg->z = z;
 			gmg->heading = heading;
-			gmg->instance_id = instance_id;
 			gmg->type = 0x01;				// '0x01' was an observed value for the type field, not sure of meaning
 
 			// we hide the real zoneid we want to evac/succor to here
@@ -843,7 +748,6 @@ void Client::ZonePC(uint32 zoneID, uint32 instance_id, float x, float y, float z
 			gmg->y = y;
 			gmg->z = z;
 			gmg->heading = heading;
-			gmg->instance_id = instance_id;
 			gmg->type = 0x01;	//an observed value, not sure of meaning
 			outapp->priority = 6;
 			FastQueuePacket(&outapp);
@@ -853,7 +757,7 @@ void Client::ZonePC(uint32 zoneID, uint32 instance_id, float x, float y, float z
 		//Clear zonesummon variables if we're zoning to our own zone
 		//Client wont generate a zone change packet to the server in this case so
 		//They aren't needed and it keeps behavior on next zone attempt from being undefined.
-		if(zoneID == zone->GetZoneID() && instance_id == zone->GetInstanceID())
+		if(zoneID == zone->GetZoneID())
 		{
 			if(zm != EvacToSafeCoords && zm != ZoneToSafeCoords && zm != ZoneToBindPoint)
 			{
@@ -868,13 +772,13 @@ void Client::ZonePC(uint32 zoneID, uint32 instance_id, float x, float y, float z
 	safe_delete_array(pZoneName);
 }
 
-void Client::GoToSafeCoords(uint16 zone_id, uint16 instance_id)
+void Client::GoToSafeCoords(uint16 zone_id)
 {
 	if (zone_id == 0) {
 		zone_id = zone->GetZoneID();
 	}
 
-	MovePC(zone_id, instance_id, 0.0f, 0.0f, 0.0f, 0.0f, 0, ZoneToSafeCoords);
+	MovePC(zone_id, 0.0f, 0.0f, 0.0f, 0.0f, 0, ZoneToSafeCoords);
 }
 
 
@@ -896,20 +800,18 @@ void NPC::Gate(uint8 bind_number) {
 	Mob::Gate(bind_number);
 }
 
-void Client::SetBindPoint(int bind_number, int to_zone, int to_instance, const glm::vec3 &location)
+void Client::SetBindPoint(int bind_number, int to_zone, const glm::vec3 &location)
 {
 	if (bind_number < 0 || bind_number >= 4)
 		bind_number = 0;
 
 	if (to_zone == -1) {
 		m_pp.binds[bind_number].zone_id = zone->GetZoneID();
-		m_pp.binds[bind_number].instance_id = (zone->GetInstanceID() != 0 && zone->IsInstancePersistent()) ? zone->GetInstanceID() : 0;
 		m_pp.binds[bind_number].x = m_Position.x;
 		m_pp.binds[bind_number].y = m_Position.y;
 		m_pp.binds[bind_number].z = m_Position.z;
 	} else {
 		m_pp.binds[bind_number].zone_id = to_zone;
-		m_pp.binds[bind_number].instance_id = to_instance;
 		m_pp.binds[bind_number].x = location.x;
 		m_pp.binds[bind_number].y = location.y;
 		m_pp.binds[bind_number].z = location.z;
@@ -917,21 +819,19 @@ void Client::SetBindPoint(int bind_number, int to_zone, int to_instance, const g
 	database.SaveCharacterBindPoint(CharacterID(), m_pp.binds[bind_number], bind_number);
 }
 
-void Client::SetBindPoint2(int bind_number, int to_zone, int to_instance, const glm::vec4 &location)
+void Client::SetBindPoint2(int bind_number, int to_zone, const glm::vec4 &location)
 {
 	if (bind_number < 0 || bind_number >= 4)
 		bind_number = 0;
 
 	if (to_zone == -1) {
 		m_pp.binds[bind_number].zone_id = zone->GetZoneID();
-		m_pp.binds[bind_number].instance_id = (zone->GetInstanceID() != 0 && zone->IsInstancePersistent()) ? zone->GetInstanceID() : 0;
 		m_pp.binds[bind_number].x = m_Position.x;
 		m_pp.binds[bind_number].y = m_Position.y;
 		m_pp.binds[bind_number].z = m_Position.z;
 		m_pp.binds[bind_number].heading = m_Position.w;
 	} else {
 		m_pp.binds[bind_number].zone_id = to_zone;
-		m_pp.binds[bind_number].instance_id = to_instance;
 		m_pp.binds[bind_number].x = location.x;
 		m_pp.binds[bind_number].y = location.y;
 		m_pp.binds[bind_number].z = location.z;
@@ -950,7 +850,6 @@ void Client::GoToBind(uint8 bind_number) {
 	if(bind_number == 0)
 		MovePC(
 			m_pp.binds[0].zone_id,
-			m_pp.binds[0].instance_id,
 			0.0f,
 			0.0f,
 			0.0f,
@@ -961,7 +860,6 @@ void Client::GoToBind(uint8 bind_number) {
 	else
 		MovePC(
 			m_pp.binds[bind_number].zone_id,
-			m_pp.binds[bind_number].instance_id,
 			m_pp.binds[bind_number].x,
 			m_pp.binds[bind_number].y,
 			m_pp.binds[bind_number].z,
@@ -971,7 +869,7 @@ void Client::GoToBind(uint8 bind_number) {
 }
 
 void Client::GoToDeath() {
-	MovePC(m_pp.binds[0].zone_id, m_pp.binds[0].instance_id, 0.0f, 0.0f, 0.0f, 0.0f, 1, ZoneToBindPoint);
+	MovePC(m_pp.binds[0].zone_id, 0.0f, 0.0f, 0.0f, 0.0f, 1, ZoneToBindPoint);
 }
 
 void Client::ClearZoneFlag(uint32 zone_id) {
@@ -1231,8 +1129,7 @@ bool Client::CanBeInZone() {
 	uint8 min_level = 0;
 
 	auto z = GetZoneVersionWithFallback(
-		ZoneID(zone->GetShortName()),
-		zone->GetInstanceVersion()
+		ZoneID(zone->GetShortName())
 	);
 	if (!z) {
 		return false;

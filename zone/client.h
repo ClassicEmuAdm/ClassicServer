@@ -21,17 +21,12 @@
 class Client;
 class EQApplicationPacket;
 class EQStream;
-class DynamicZone;
-class Expedition;
-class ExpeditionLockoutTimer;
-class ExpeditionRequest;
 class Group;
 class NPC;
 class Object;
 class Raid;
 class Seperator;
 class ServerPacket;
-struct DynamicZoneLocation;
 enum WaterRegionType : int;
 
 namespace EQ
@@ -64,8 +59,6 @@ namespace EQ
 #include "zone.h"
 #include "zonedb.h"
 #include "../common/zone_store.h"
-#include "task_manager.h"
-#include "task_client_state.h"
 #include "cheat_manager.h"
 
 #ifdef _WINDOWS
@@ -89,7 +82,6 @@ namespace EQ
 #define XTARGET_HARDCAP 20
 
 extern Zone* zone;
-extern TaskManager *task_manager;
 
 class CLIENTPACKET
 {
@@ -174,7 +166,6 @@ struct RespawnOption
 {
 	std::string name;
 	uint32 zone_id;
-	uint16 instance_id;
 	float x;
 	float y;
 	float z;
@@ -433,7 +424,6 @@ public:
 	inline const float GetBindZ(uint32 index = 0) const { return m_pp.binds[index].z; }
 	inline const float GetBindHeading(uint32 index = 0) const { return m_pp.binds[index].heading; }
 	inline uint32 GetBindZoneID(uint32 index = 0) const { return m_pp.binds[index].zone_id; }
-	inline uint32 GetBindInstanceID(uint32 index = 0) const { return m_pp.binds[index].instance_id; }
 	int64 CalcMaxMana();
 	int64 CalcBaseMana();
 	const int64& SetMana(int64 amount);
@@ -605,12 +595,11 @@ public:
 
 	inline uint32 GetEXP() const { return m_pp.exp; }
 
-	inline double GetAAEXPModifier(uint32 zone_id, int16 instance_version = -1) const { return database.GetAAEXPModifier(CharacterID(), zone_id, instance_version); };
-	inline double GetEXPModifier(uint32 zone_id, int16 instance_version = -1) const { return database.GetEXPModifier(CharacterID(), zone_id, instance_version); };
-	inline void SetAAEXPModifier(uint32 zone_id, double aa_modifier, int16 instance_version = -1) { database.SetAAEXPModifier(CharacterID(), zone_id, aa_modifier, instance_version); };
-	inline void SetEXPModifier(uint32 zone_id, double exp_modifier, int16 instance_version = -1) { database.SetEXPModifier(CharacterID(), zone_id, exp_modifier, instance_version); };
+	inline double GetAAEXPModifier(uint32 zone_id) const { return database.GetAAEXPModifier(CharacterID(), zone_id); };
+	inline double GetEXPModifier(uint32 zone_id) const { return database.GetEXPModifier(CharacterID(), zone_id); };
+	inline void SetAAEXPModifier(uint32 zone_id, double aa_modifier) { database.SetAAEXPModifier(CharacterID(), zone_id, aa_modifier); };
+	inline void SetEXPModifier(uint32 zone_id, double exp_modifier) { database.SetEXPModifier(CharacterID(), zone_id, exp_modifier); };
 
-	bool UpdateLDoNPoints(uint32 theme_id, int points);
 	void SetPVPPoints(uint32 Points) { m_pp.PVPCurrentPoints = Points; }
 	uint32 GetPVPPoints() { return m_pp.PVPCurrentPoints; }
 	void AddPVPPoints(uint32 Points);
@@ -651,26 +640,19 @@ public:
 	virtual void SetLevel(uint8 set_level, bool command = false);
 
 	void GoToBind(uint8 bindnum = 0);
-	void GoToSafeCoords(uint16 zone_id, uint16 instance_id);
+	void GoToSafeCoords(uint16 zone_id);
 	void Gate(uint8 bindnum = 0);
-	void SetBindPoint(int bind_num = 0, int to_zone = -1, int to_instance = 0, const glm::vec3& location = glm::vec3());
-	void SetBindPoint2(int bind_num = 0, int to_zone = -1, int to_instance = 0, const glm::vec4& location = glm::vec4());
+	void SetBindPoint(int bind_num = 0, int to_zone = -1, const glm::vec3& location = glm::vec3());
+	void SetBindPoint2(int bind_num = 0, int to_zone = -1, const glm::vec4& location = glm::vec4());
 	void SetStartZone(uint32 zoneid, float x = 0.0f, float y =0.0f, float z = 0.0f, float heading = 0.0f);
 	uint32 GetStartZone(void);
 	void MovePC(const char* zonename, float x, float y, float z, float heading, uint8 ignorerestrictions = 0, ZoneMode zm = ZoneSolicited);
 	void MovePC(uint32 zoneID, float x, float y, float z, float heading, uint8 ignorerestrictions = 0, ZoneMode zm = ZoneSolicited);
 	void MovePC(float x, float y, float z, float heading, uint8 ignorerestrictions = 0, ZoneMode zm = ZoneSolicited);
-	void MovePC(uint32 zoneID, uint32 instanceID, float x, float y, float z, float heading, uint8 ignorerestrictions = 0, ZoneMode zm = ZoneSolicited);
 	void MoveZone(const char *zone_short_name);
 	void MoveZoneGroup(const char *zone_short_name);
 	void MoveZoneRaid(const char *zone_short_name);
-	void MoveZoneInstance(uint16 instance_id);
-	void MoveZoneInstanceGroup(uint16 instance_id);
-	void MoveZoneInstanceRaid(uint16 instance_id);
 	void SendToGuildHall();
-	void SendToInstance(std::string instance_type, std::string zone_short_name, uint32 instance_version, float x, float y, float z, float heading, std::string instance_identifier, uint32 duration);
-	void AssignToInstance(uint16 instance_id);
-	void RemoveFromInstance(uint16 instance_id);
 	void WhoAll();
 	bool CheckLoreConflict(const EQ::ItemData* item);
 	void ChangeLastName(std::string last_name);
@@ -681,7 +663,6 @@ public:
 	void SacrificeConfirm(Client* caster);
 	void Sacrifice(Client* caster);
 	void GoToDeath();
-	inline const int32 GetInstanceID() const { return zone->GetInstanceID(); }
 	void SetZoning(bool in) { bZoning = in; }
 
 	FACTION_VALUE GetReverseFactionCon(Mob* iOther);
@@ -1076,249 +1057,10 @@ public:
 	PendingTranslocate_Struct PendingTranslocateData;
 	void SendOPTranslocateConfirm(Mob *Caster, uint16 SpellID);
 
-	// Task System Methods
-	void LoadClientTaskState();
-	void RemoveClientTaskState();
-	void SendTaskActivityComplete(int task_id, int activity_id, int task_index, TaskType task_type, int task_incomplete=1);
-	void SendTaskFailed(int task_id, int task_index, TaskType task_type);
-	void SendTaskComplete(int task_index);
-	bool HasTaskRequestCooldownTimer();
-	void SendTaskRequestCooldownTimerMessage();
-	void StartTaskRequestCooldownTimer();
-	inline ClientTaskState *GetTaskState() const { return task_state; }
-	inline bool HasTaskState() { if (task_state) { return true; } return false; }
-	inline void CancelTask(int task_index, TaskType task_type)
-	{
-		if (task_state) {
-			task_state->CancelTask(
-				this,
-				task_index,
-				task_type
-			);
-		}
-	}
-	inline bool SaveTaskState()
-	{
-		return task_manager != nullptr && task_manager->SaveClientState(this, task_state);
-	}
-	inline bool IsTaskStateLoaded() { return task_state != nullptr; }
-	inline bool IsTaskActive(int task_id) { return task_state != nullptr && task_state->IsTaskActive(task_id); }
-	inline bool IsTaskActivityActive(int task_id, int activity_id)
-	{
-		return task_state != nullptr &&
-			   task_state->IsTaskActivityActive(
-				   task_id,
-				   activity_id
-			   );
-	}
-	inline ActivityState GetTaskActivityState(TaskType task_type, int index, int activity_id)
-	{
-		return (task_state ? task_state->GetTaskActivityState(task_type, index, activity_id) : ActivityHidden);
-	}
-	inline void UpdateTaskActivity(
-		int task_id,
-		int activity_id,
-		int count,
-		bool ignore_quest_update = false
-	)
-	{
-		if (task_state) {
-			task_state->UpdateTaskActivity(this, task_id, activity_id, count, ignore_quest_update);
-		}
-	}
-	inline void RemoveTaskByTaskID(uint32 task_id) {
-		if (task_state) {
-			task_state->RemoveTaskByTaskID(this, task_id);
-		}
-	}
-	inline void ResetTaskActivity(int task_id, int activity_id)
-	{
-		if (task_state) {
-			task_state->ResetTaskActivity(
-				this,
-				task_id,
-				activity_id
-			);
-		}
-	}
-	inline void UpdateTasksForItem(TaskActivityType type, int item_id, int count = 1)
-	{
-		if (task_state) {
-			task_state->UpdateTasksForItem(this, type, item_id, count);
-		}
-	}
-	inline void UpdateTasksOnLoot(Corpse* corpse, int item_id, int count = 1)
-	{
-		if (task_state) {
-			task_state->UpdateTasksOnLoot(this, corpse, item_id, count);
-		}
-	}
-	inline void UpdateTasksOnExplore(const glm::vec4& pos)
-	{
-		if (task_state) {
-			task_state->UpdateTasksOnExplore(this, pos);
-		}
-	}
-	inline bool UpdateTasksOnSpeakWith(NPC* npc)
-	{
-		return task_state && task_state->UpdateTasksOnSpeakWith(this, npc);
-	}
-	inline bool UpdateTasksOnDeliver(std::vector<EQ::ItemInstance*>& items, Trade& trade, NPC* npc)
-	{
-		return task_state && task_state->UpdateTasksOnDeliver(this, items, trade, npc);
-	}
-	void UpdateTasksOnTouchSwitch(int dz_switch_id)
-	{
-		if (task_state) { task_state->UpdateTasksOnTouch(this, dz_switch_id); }
-	}
-	inline void TaskSetSelector(Mob* mob, int task_set_id, bool ignore_cooldown)
-	{
-		if (task_manager && task_state) {
-			task_manager->TaskSetSelector(this, mob, task_set_id, ignore_cooldown);
-		}
-	}
-	inline void TaskQuestSetSelector(Mob* mob, const std::vector<int>& tasks, bool ignore_cooldown)
-	{
-		if (task_manager && task_state) {
-			task_manager->TaskQuestSetSelector(this, mob, tasks, ignore_cooldown);
-		}
-	}
-	inline void EnableTask(int task_count, int *task_list)
-	{
-		if (task_state) {
-			task_state->EnableTask(
-				CharacterID(),
-				task_count,
-				task_list
-			);
-		}
-	}
-	inline void DisableTask(int task_count, int *task_list)
-	{
-		if (task_state) {
-			task_state->DisableTask(
-				CharacterID(),
-				task_count,
-				task_list
-			);
-		}
-	}
-	inline bool IsTaskEnabled(int task_id) {
-		return task_state != nullptr && task_state->IsTaskEnabled(task_id);
-	}
-	inline void ProcessTaskProximities(float x, float y, float z)
-	{
-		if (task_state) {
-			task_state->ProcessTaskProximities(this, x, y, z);
-		}
-	}
-	inline void AssignTask(
-		int task_id,
-		int npc_id = 0,
-		bool enforce_level_requirement = false
-	) {
-		if (task_state) {
-			task_state->AcceptNewTask(this, task_id, npc_id, std::time(nullptr), enforce_level_requirement);
-		}
-	}
-	inline int ActiveSpeakTask(NPC* npc)
-	{
-		if (task_state) {
-			return task_state->ActiveSpeakTask(this, npc);
-		}
-		else {
-			return 0;
-		}
-	}
-	inline int ActiveSpeakActivity(NPC* npc, int task_id)
-	{
-		if (task_state) {
-			return task_state->ActiveSpeakActivity(this, npc, task_id);
-		}
-		else { return 0; }
-	}
-	inline void FailTask(int task_id) { if (task_state) { task_state->FailTask(this, task_id); }}
-	inline int TaskTimeLeft(int task_id) { return (task_state ? task_state->TaskTimeLeft(task_id) : 0); }
-	inline int EnabledTaskCount(int task_set_id)
-	{
-		return (task_state ? task_state->EnabledTaskCount(task_set_id) : -1);
-	}
-	inline int IsTaskCompleted(int task_id) { return (task_state ? task_state->IsTaskCompleted(task_id) : -1); }
-	inline void ShowClientTasks(Client *client) { if (task_state) { task_state->ShowClientTasks(this, client); }}
-	inline void CancelAllTasks() { if (task_state) { task_state->CancelAllTasks(this); }}
-	inline int GetActiveTaskCount() { return (task_state ? task_state->GetActiveTaskCount() : 0); }
-	inline int GetActiveTaskID(int index) { return (task_state ? task_state->GetActiveTaskID(index) : -1); }
-	inline int GetTaskStartTime(TaskType task_type, int index)
-	{
-		return (task_state ? task_state->GetTaskStartTime(
-			task_type,
-			index
-		) : -1);
-	}
-	inline bool IsTaskActivityCompleted(TaskType task_type, int index, int activity_id)
-	{
-		return task_state != nullptr && task_state->IsTaskActivityCompleted(task_type, index, activity_id);
-	}
-	inline int GetTaskActivityDoneCount(TaskType task_type, int client_task_index, int activity_id)
-	{
-		return (task_state ? task_state->GetTaskActivityDoneCount(task_type, client_task_index, activity_id) : 0);
-	}
-	inline int GetTaskActivityDoneCountFromTaskID(int task_id, int activity_id)
-	{
-		return (task_state ? task_state->GetTaskActivityDoneCountFromTaskID(task_id, activity_id) : 0);
-	}
-	inline int ActiveTasksInSet(int task_set_id)
-	{
-		return (task_state ? task_state->ActiveTasksInSet(task_set_id) : 0);
-	}
-	inline int CompletedTasksInSet(int task_set_id)
-	{
-		return (task_state ? task_state->CompletedTasksInSet(task_set_id) : 0);
-	}
-	void PurgeTaskTimers();
-	void LockSharedTask(bool lock) { if (task_state) { task_state->LockSharedTask(this, lock); } }
-	void EndSharedTask(bool fail = false) { if (task_state) { task_state->EndSharedTask(this, fail); } }
-
-	// shared task shims / middleware
-	// these variables are used as a shim to intercept normal localized task functionality
-	// and pipe it into zone -> world and back to world -> zone
-	// world is authoritative
-	bool m_requesting_shared_task        = false;
-	bool m_shared_task_update            = false;
-	bool m_requested_shared_task_removal = false;
-
 	std::vector<Client*> GetPartyMembers();
-	void HandleUpdateTasksOnKill(uint32 npc_type_id);
-
 	inline const EQ::versions::ClientVersion ClientVersion() const { return m_ClientVersion; }
 	inline const uint32 ClientVersionBit() const { return m_ClientVersionBit; }
 	inline void SetClientVersion(EQ::versions::ClientVersion client_version) { m_ClientVersion = client_version; }
-
-	/** Adventure Stuff **/
-	void SendAdventureError(const char *error);
-	void SendAdventureDetails();
-	void SendAdventureCount(uint32 count, uint32 total);
-	void NewAdventure(int id, int theme, const char *text, int member_count, const char *members);
-	bool IsOnAdventure();
-	void LeaveAdventure();
-	void AdventureFinish(bool win, int theme, int points);
-	void SetAdventureData(char *data) { adv_data = data; }
-	void ClearAdventureData() { safe_delete(adv_data); }
-	bool HasAdventureData() { return adv_data != nullptr; }
-	void ClearCurrentAdventure();
-	void PendingAdventureRequest() { adventure_request_timer = new Timer(8000); }
-	bool GetPendingAdventureRequest() const { return (adventure_request_timer != nullptr); }
-	void ClearPendingAdventureRequest() { safe_delete(adventure_request_timer); }
-	void PendingAdventureCreate() { adventure_create_timer = new Timer(8000); }
-	bool GetPendingAdventureCreate() const { return (adventure_create_timer != nullptr); }
-	void ClearPendingAdventureCreate() { safe_delete(adventure_create_timer); }
-	void PendingAdventureLeave() { adventure_leave_timer = new Timer(8000); }
-	bool GetPendingAdventureLeave() const { return (adventure_leave_timer != nullptr); }
-	void ClearPendingAdventureLeave() { safe_delete(adventure_leave_timer); }
-	void PendingAdventureDoorClick() { adventure_door_timer = new Timer(8000); }
-	bool GetPendingAdventureDoorClick() const { return (adventure_door_timer != nullptr); }
-	void ClearPendingAdventureDoorClick() { safe_delete(adventure_door_timer); }
-	void ClearPendingAdventureData();
 
 	int GetAggroCount();
 	void IncrementAggroCount(bool raid_target = false);
@@ -1327,20 +1069,7 @@ public:
 	void SendDisciplineTimers();
 	void SendRespawnBinds();
 
-	uint32 GetLDoNWins() { return (m_pp.ldon_wins_guk + m_pp.ldon_wins_mir + m_pp.ldon_wins_mmc + m_pp.ldon_wins_ruj + m_pp.ldon_wins_tak); }
-	uint32 GetLDoNLosses() { return (m_pp.ldon_losses_guk + m_pp.ldon_losses_mir + m_pp.ldon_losses_mmc + m_pp.ldon_losses_ruj + m_pp.ldon_losses_tak); }
-	uint32 GetLDoNWinsTheme(uint32 t);
-	uint32 GetLDoNLossesTheme(uint32 t);
-	uint32 GetLDoNPointsTheme(uint32 t);
-	void UpdateLDoNWinLoss(uint32 theme_id, bool win = false, bool remove = false);
-	void CheckLDoNHail(Mob *target);
 	void CheckEmoteHail(Mob *target, const char* message);
-
-	void HandleLDoNOpen(NPC *target);
-	void HandleLDoNSenseTraps(NPC *target, uint16 skill, uint8 type);
-	void HandleLDoNDisarm(NPC *target, uint16 skill, uint8 type);
-	void HandleLDoNPickLock(NPC *target, uint16 skill, uint8 type);
-	int LDoNChest_SkillCheck(NPC *target, int skill);
 
 	void MarkSingleCompassLoc(float in_x, float in_y, float in_z, uint8 count=1);
 
@@ -1350,48 +1079,6 @@ public:
 	static void SendCrossZoneMessageString(
 		Client* client, const std::string& client_name, uint16_t chat_type,
 		uint32_t string_id, const std::initializer_list<std::string>& arguments = {});
-
-	void AddExpeditionLockout(const ExpeditionLockoutTimer& lockout, bool update_db = false);
-	void AddExpeditionLockoutDuration(const std::string& expedition_name,
-		const std::string& event_Name, int seconds, const std::string& uuid = {}, bool update_db = false);
-	void AddNewExpeditionLockout(const std::string& expedition_name,
-		const std::string& event_name, uint32_t duration, std::string uuid = {});
-	Expedition* CreateExpedition(DynamicZone& dz, bool disable_messages = false);
-	Expedition* CreateExpedition(const std::string& zone_name,
-		uint32 version, uint32 duration, const std::string& expedition_name,
-		uint32 min_players, uint32 max_players, bool disable_messages = false);
-	Expedition* CreateExpeditionFromTemplate(uint32_t dz_template_id);
-	Expedition* GetExpedition() const;
-	uint32 GetExpeditionID() const { return m_expedition_id; }
-	const ExpeditionLockoutTimer* GetExpeditionLockout(
-		const std::string& expedition_name, const std::string& event_name, bool include_expired = false) const;
-	const std::vector<ExpeditionLockoutTimer>& GetExpeditionLockouts() const { return m_expedition_lockouts; };
-	std::vector<ExpeditionLockoutTimer> GetExpeditionLockouts(const std::string& expedition_name, bool include_expired = false);
-	uint32 GetPendingExpeditionInviteID() const { return m_pending_expedition_invite.expedition_id; }
-	bool HasExpeditionLockout(const std::string& expedition_name, const std::string& event_name, bool include_expired = false);
-	bool IsInExpedition() const { return m_expedition_id != 0; }
-	void RemoveAllExpeditionLockouts(const std::string& expedition_name, bool update_db = false);
-	void RemoveExpeditionLockout(const std::string& expedition_name,
-		const std::string& event_name, bool update_db = false);
-	void RequestPendingExpeditionInvite();
-	void SendExpeditionLockoutTimers();
-	void SetExpeditionID(uint32 expedition_id) { m_expedition_id = expedition_id; };
-	void SetPendingExpeditionInvite(ExpeditionInvite&& invite) { m_pending_expedition_invite = invite; }
-	void DzListTimers();
-	void SetDzRemovalTimer(bool enable_timer);
-	void SendDzCompassUpdate();
-	void GoToDzSafeReturnOrBind(const DynamicZone* dynamic_zone);
-	void MovePCDynamicZone(uint32 zone_id, int zone_version = -1, bool msg_if_invalid = false);
-	void MovePCDynamicZone(const std::string& zone_name, int zone_version = -1, bool msg_if_invalid = false);
-	bool TryMovePCDynamicZoneSwitch(int dz_switch_id);
-	std::vector<DynamicZone*> GetDynamicZones(uint32_t zone_id = 0, int zone_version = -1);
-	std::unique_ptr<EQApplicationPacket> CreateDzSwitchListPacket(const std::vector<DynamicZone*>& dzs);
-	std::unique_ptr<EQApplicationPacket> CreateCompassPacket(const std::vector<DynamicZoneCompassEntry_Struct>& entries);
-	void AddDynamicZoneID(uint32_t dz_id);
-	void RemoveDynamicZoneID(uint32_t dz_id);
-	void SendDynamicZoneUpdates();
-	void SetDynamicZoneMemberStatus(DynamicZoneMemberStatus status);
-	void CreateTaskDynamicZone(int task_id, DynamicZone& dz_request);
 
 	void CalcItemScale();
 	bool CalcItemScale(uint32 slot_x, uint32 slot_y); // behavior change: 'slot_y' is now [RANGE]_END and not [RANGE]_END + 1
@@ -1416,10 +1103,6 @@ public:
 	bool TryReward(uint32 claim_id);
 	QGlobalCache *GetQGlobals() { return qGlobals; }
 	QGlobalCache *CreateQGlobals() { qGlobals = new QGlobalCache(); return qGlobals; }
-	void GuildBankAck();
-	void GuildBankDepositAck(bool Fail, int8 action);
-	inline bool IsGuildBanker() { return GuildBanker; }
-	void ClearGuildBank();
 	void SendGroupCreatePacket();
 	void SendGroupLeaderChangePacket(const char *LeaderName);
 	void SendGroupJoinAcknowledge();
@@ -1433,7 +1116,7 @@ public:
 	void HandleRespawnFromHover(uint32 Option);
 	bool IsHoveringForRespawn() { return RespawnFromHoverTimer.Enabled(); }
 	std::list<RespawnOption> respawn_options;
-	void AddRespawnOption(std::string option_name, uint32 zoneid, uint16 instance_id, float x, float y, float z, float h = 0, bool initial_selection = false, int8 position = -1);
+	void AddRespawnOption(std::string option_name, uint32 zoneid, float x, float y, float z, float h = 0, bool initial_selection = false, int8 position = -1);
 	bool RemoveRespawnOption(std::string option_name);
 	bool RemoveRespawnOption(uint8 position);
 	void ClearRespawnOptions() { respawn_options.clear(); }
@@ -1558,7 +1241,6 @@ public:
 	float GetDamageMultiplier(EQ::skills::SkillType how_long_has_this_been_missing);
 	void Consume(const EQ::ItemData *item, uint8 type, int16 slot, bool auto_consume);
 	void PlayMP3(const char* fname);
-	void ExpeditionSay(const char *str, int ExpID);
 	int mod_client_damage(int64 damage, EQ::skills::SkillType skillinuse, int hand, const EQ::ItemInstance* weapon, Mob* other);
 	bool mod_client_message(char* message, uint8 chan_num);
 	bool mod_can_increase_skill(EQ::skills::SkillType skillid, Mob* against_who);
@@ -1633,9 +1315,6 @@ public:
 	void ShowDevToolsMenu();
 	CheatManager cheat_manager;
 
-	// rate limit
-	Timer m_list_task_timers_rate_limit = {};
-
 	std::map<std::string,std::string> GetMerchantDataBuckets();
 
 protected:
@@ -1663,25 +1342,12 @@ protected:
 	bool los_status_facing;
 	QGlobalCache *qGlobals;
 
-	/** Adventure Variables **/
-	Timer *adventure_request_timer;
-	Timer *adventure_create_timer;
-	Timer *adventure_leave_timer;
-	Timer *adventure_door_timer;
-	Timer *adventure_stats_timer;
-	Timer *adventure_leaderboard_timer;
-	int adv_requested_theme;
-	int adv_requested_id;
-	char *adv_requested_data;
-	int adv_requested_member_count;
-	char *adv_data;
-
 private:
 
 	eqFilterMode ClientFilters[_FilterCount];
 	int32 HandlePacket(const EQApplicationPacket *app);
 	void OPTGB(const EQApplicationPacket *app);
-	void OPRezzAnswer(uint32 Action, uint32 SpellID, uint16 ZoneID, uint16 InstanceID, float x, float y, float z);
+	void OPRezzAnswer(uint32 Action, uint32 SpellID, uint16 ZoneID, float x, float y, float z);
 	void OPMemorizeSpell(const EQApplicationPacket *app);
 	void OPMoveCoin(const EQApplicationPacket* app);
 	void MoveItemCharges(EQ::ItemInstance &from, int16 to_slot, uint8 type);
@@ -1838,9 +1504,9 @@ private:
 	//Zoning related stuff
 	void SendZoneCancel(ZoneChange_Struct *zc);
 	void SendZoneError(ZoneChange_Struct *zc, int8 err);
-	void DoZoneSuccess(ZoneChange_Struct *zc, uint16 zone_id, uint32 instance_id, float dest_x, float dest_y, float dest_z, float dest_h, int8 ignore_r);
-	void ZonePC(uint32 zoneID, uint32 instance_id, float x, float y, float z, float heading, uint8 ignorerestrictions, ZoneMode zm);
-	void ProcessMovePC(uint32 zoneID, uint32 instance_id, float x, float y, float z, float heading, uint8 ignorerestrictions = 0, ZoneMode zm = ZoneSolicited);
+	void DoZoneSuccess(ZoneChange_Struct *zc, uint16 zone_id, float dest_x, float dest_y, float dest_z, float dest_h, int8 ignore_r);
+	void ZonePC(uint32 zoneID, float x, float y, float z, float heading, uint8 ignorerestrictions, ZoneMode zm);
+	void ProcessMovePC(uint32 zoneID, float x, float y, float z, float heading, uint8 ignorerestrictions = 0, ZoneMode zm = ZoneSolicited);
 
 	glm::vec4 m_ZoneSummonLocation;
 	uint16 zonesummon_id;
@@ -1886,7 +1552,6 @@ private:
 	Timer position_update_timer; /* Timer used when client hasn't updated within a 10 second window */
 	Timer consent_throttle_timer;
 	Timer dynamiczone_removal_timer;
-	Timer task_request_timer;
 	Timer pick_lock_timer;
 
 	Timer heroforge_wearchange_timer;
@@ -1921,15 +1586,11 @@ private:
 	std::set<uint32> zone_flags;
 	std::set<uint32> peqzone_flags;
 
-	ClientTaskState *task_state;
 	int TotalSecondsPlayed;
 
 	// we use this very sparingly at the zone level
 	// used for keeping clients in donecount sync before world sends absolute confirmations of state
-	int64 m_shared_task_id = 0;
 public:
-	void SetSharedTaskId(int64 shared_task_id);
-	int64 GetSharedTaskId() const;
 private:
 
 	//Anti Spam Stuff
@@ -1998,13 +1659,6 @@ private:
 	bool InterrogateInventory_error(int16 head, int16 index, const EQ::ItemInstance* inst, const EQ::ItemInstance* parent, int depth);
 
 	uint8 client_max_level;
-
-	uint32 m_expedition_id = 0;
-	ExpeditionInvite m_pending_expedition_invite { 0 };
-	std::vector<ExpeditionLockoutTimer> m_expedition_lockouts;
-	glm::vec3 m_quest_compass;
-	bool m_has_quest_compass = false;
-	std::vector<uint32_t> m_dynamic_zone_ids;
 
 #ifdef BOTS
 

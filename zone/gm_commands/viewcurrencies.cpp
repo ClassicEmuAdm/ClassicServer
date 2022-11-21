@@ -94,25 +94,6 @@ void command_viewcurrencies(Client *c, const Seperator *sep)
 		}
 	}
 
-	for (
-		uint32 ldon_currency_id = LDoNThemes::GUK;
-		ldon_currency_id <= LDoNThemes::TAK;
-		ldon_currency_id++
-	) {
-		auto ldon_currency_value = target->GetLDoNPointsTheme(ldon_currency_id);
-		if (ldon_currency_value) {
-			c->Message(
-				Chat::White,
-				fmt::format(
-					"{} for {} | {}",
-					EQ::constants::GetLDoNThemeName(ldon_currency_id),
-					c->GetTargetDescription(target, TargetDescriptionType::UCSelf),
-					ldon_currency_value
-				).c_str()
-			);
-		}
-	}
-
 	auto pvp_points = target->GetPVPPoints();
 	if (pvp_points) {
 		c->Message(

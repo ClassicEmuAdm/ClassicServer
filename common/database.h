@@ -131,7 +131,7 @@ public:
 	uint32	GetAccountIDByChar(uint32 char_id);
 	uint32	GetAccountIDByName(std::string account_name, std::string loginserver, int16* status = 0, uint32* lsid = 0);
 	uint32	GetCharacterID(const char *name);
-	uint32	GetCharacterInfo(std::string character_name, uint32 *account_id, uint32 *zone_id, uint32 *instance_id);
+	uint32	GetCharacterInfo(std::string character_name, uint32 *account_id, uint32 *zone_id);
 	uint32	GetGuildIDByCharID(uint32 char_id);
 	uint32  GetGroupIDByCharID(uint32 char_id);
 	uint32  GetRaidIDByCharID(uint32 char_id);
@@ -142,41 +142,6 @@ public:
 	std::string GetNPCNameByID(uint32 npc_id);
 	std::string GetCleanNPCNameByID(uint32 npc_id);
 	void	LoginIP(uint32 account_id, std::string login_ip);
-
-	/* Instancing */
-
-	bool AddClientToInstance(uint16 instance_id, uint32 char_id);
-	bool CharacterInInstanceGroup(uint16 instance_id, uint32 char_id);
-	bool CheckInstanceExists(uint16 instance_id);
-	bool CheckInstanceExpired(uint16 instance_id);
-	bool CreateInstance(uint16 instance_id, uint32 zone_id, uint32 version, uint32 duration);
-	bool GetUnusedInstanceID(uint16 &instance_id);
-	bool GlobalInstance(uint16 instance_id);
-	bool RemoveClientFromInstance(uint16 instance_id, uint32 char_id);
-	bool RemoveClientsFromInstance(uint16 instance_id);
-	bool VerifyInstanceAlive(uint16 instance_id, uint32 char_id);
-	bool VerifyZoneInstance(uint32 zone_id, uint16 instance_id);
-
-	uint16 GetInstanceID(uint32 zone, uint32 charid, int16 version);
-	uint16 GetInstanceVersion(uint16 instance_id);
-	uint32 GetTimeRemainingInstance(uint16 instance_id, bool &is_perma);
-	uint32 VersionFromInstanceID(uint16 instance_id);
-	uint32 ZoneIDFromInstanceID(uint16 instance_id);
-
-	void AssignGroupToInstance(uint32 gid, uint32 instance_id);
-	void AssignRaidToInstance(uint32 rid, uint32 instance_id);
-	void BuryCorpsesInInstance(uint16 instance_id);
-	void DeleteInstance(uint16 instance_id);
-	void FlagInstanceByGroupLeader(uint32 zone, int16 version, uint32 charid, uint32 gid);
-	void FlagInstanceByRaidLeader(uint32 zone, int16 version, uint32 charid, uint32 rid);
-	void GetCharactersInInstance(uint16 instance_id, std::list<uint32> &charid_list);
-	void PurgeExpiredInstances();
-	void SetInstanceDuration(uint16 instance_id, uint32 new_duration);
-
-	/* Adventure related. */
-
-	void UpdateAdventureStatsEntry(uint32 char_id, uint8 theme, bool win = false, bool remove = false);
-	bool GetAdventureStats(uint32 char_id, AdventureStats_Struct *as);
 
 	/* Account Related */
 
@@ -249,8 +214,8 @@ public:
 	bool	GetZoneGraveyard(const uint32 graveyard_id, uint32* graveyard_zoneid = 0, float* graveyard_x = 0, float* graveyard_y = 0, float* graveyard_z = 0, float* graveyard_heading = 0);
 	bool	LoadPTimers(uint32 charid, PTimerList &into);
 
-	uint8	GetPEQZone(uint32 zone_id, uint32 version);
-	uint8	GetMinStatus(uint32 zone_id, uint32 instance_version);
+	uint8	GetPEQZone(uint32 zone_id);
+	uint8	GetMinStatus(uint32 zone_id);
 	uint8	GetRaceSkill(uint8 skillid, uint8 in_race);
 	uint8	GetServerType();
 	uint8	GetSkillCap(uint8 skillid, uint8 in_race, uint8 in_class, uint16 in_level);

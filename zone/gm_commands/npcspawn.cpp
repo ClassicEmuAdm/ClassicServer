@@ -48,7 +48,6 @@ void command_npcspawn(Client *c, const Seperator *sep)
 		content_db.NPCSpawnDB(
 			is_add ? NPCSpawnTypes::AddNewSpawngroup : NPCSpawnTypes::CreateNewSpawn,
 			zone->GetShortName(),
-			zone->GetInstanceVersion(),
 			c,
 			target,
 			extra
@@ -87,7 +86,6 @@ void command_npcspawn(Client *c, const Seperator *sep)
 		content_db.NPCSpawnDB(
 			spawn_update_type,
 			zone->GetShortName(),
-			zone->GetInstanceVersion(),
 			c,
 			target
 		);

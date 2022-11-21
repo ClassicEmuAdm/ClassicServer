@@ -98,14 +98,14 @@ Lua_Client Lua_Raid::GetClientByIndex(int member_index) {
 	return self->GetClientByIndex(member_index);
 }
 
-void Lua_Raid::TeleportGroup(Lua_Mob sender, uint32 zone_id, uint32 instance_id, float x, float y, float z, float h, uint32 group_id) {
+void Lua_Raid::TeleportGroup(Lua_Mob sender, uint32 zone_id, float x, float y, float z, float h, uint32 group_id) {
 	Lua_Safe_Call_Void();
-	self->TeleportGroup(sender, zone_id, instance_id, x, y, z, h, group_id);
+	self->TeleportGroup(sender, zone_id, x, y, z, h, group_id);
 }
 
-void Lua_Raid::TeleportRaid(Lua_Mob sender, uint32 zone_id, uint32 instance_id, float x, float y, float z, float h) {
+void Lua_Raid::TeleportRaid(Lua_Mob sender, uint32 zone_id, float x, float y, float z, float h) {
 	Lua_Safe_Call_Void();
-	self->TeleportRaid(sender, zone_id, instance_id, x, y, z, h);
+	self->TeleportRaid(sender, zone_id, x, y, z, h);
 }
 
 int Lua_Raid::GetID() {
@@ -136,18 +136,6 @@ int Lua_Raid::GetGroupNumber(int member_index) {
 	return self->members[member_index].GroupNumber;
 }
 
-bool Lua_Raid::DoesAnyMemberHaveExpeditionLockout(std::string expedition_name, std::string event_name)
-{
-	Lua_Safe_Call_Bool();
-	return self->DoesAnyMemberHaveExpeditionLockout(expedition_name, event_name);
-}
-
-bool Lua_Raid::DoesAnyMemberHaveExpeditionLockout(std::string expedition_name, std::string event_name, int max_check_count)
-{
-	Lua_Safe_Call_Bool();
-	return self->DoesAnyMemberHaveExpeditionLockout(expedition_name, event_name, max_check_count);
-}
-
 luabind::scope lua_register_raid() {
 	return luabind::class_<Lua_Raid>("Raid")
 	.def(luabind::constructor<>())
@@ -155,8 +143,6 @@ luabind::scope lua_register_raid() {
 	.property("valid", &Lua_Raid::Valid)
 	.def("BalanceHP", (void(Lua_Raid::*)(int,uint32))&Lua_Raid::BalanceHP)
 	.def("CastGroupSpell", (void(Lua_Raid::*)(Lua_Mob,int,uint32))&Lua_Raid::CastGroupSpell)
-	.def("DoesAnyMemberHaveExpeditionLockout", (bool(Lua_Raid::*)(std::string, std::string))&Lua_Raid::DoesAnyMemberHaveExpeditionLockout)
-	.def("DoesAnyMemberHaveExpeditionLockout", (bool(Lua_Raid::*)(std::string, std::string, int))&Lua_Raid::DoesAnyMemberHaveExpeditionLockout)
 	.def("GetClientByIndex", (Lua_Client(Lua_Raid::*)(int))&Lua_Raid::GetClientByIndex)
 	.def("GetGroup", (int(Lua_Raid::*)(Lua_Client))&Lua_Raid::GetGroup)
 	.def("GetGroup", (int(Lua_Raid::*)(const char*))&Lua_Raid::GetGroup)

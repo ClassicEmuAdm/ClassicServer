@@ -1196,8 +1196,7 @@ void Client::FinishAlternateAdvancementPurchase(AA::Rank *rank, bool ignore_cost
 				"Ranked AA Purchase :: aa_id:{} at cost:{} in zoneid:{} instid:{}",
 				rank->id,
 				cost,
-				GetZoneID(),
-				GetInstanceID()
+				GetZoneID()
 			);
 
 			QServ->PlayerLogEvent(Player_Log_AA_Purchases, CharacterID(), event_desc);
@@ -1217,8 +1216,7 @@ void Client::FinishAlternateAdvancementPurchase(AA::Rank *rank, bool ignore_cost
 				"Initial AA Purchase :: aa_id:{} at cost:{} in zoneid:{} instid:{}",
 				rank->id,
 				cost,
-				GetZoneID(),
-				GetInstanceID()
+				GetZoneID()
 			);
 
 			QServ->PlayerLogEvent(Player_Log_AA_Purchases, CharacterID(), event_desc);

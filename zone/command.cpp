@@ -20,12 +20,9 @@
 #include "../common/say_link.h"
 #include "../common/net/eqstream.h"
 #include "../common/file.h"
-#include "../common/repositories/dynamic_zones_repository.h"
 
 #include "data_bucket.h"
 #include "command.h"
-#include "dynamic_zone.h"
-#include "expedition.h"
 #include "guild_mgr.h"
 #include "qglobals.h"
 #include "queryserv.h"
@@ -39,7 +36,6 @@
 
 extern QueryServ* QServ;
 extern WorldServer worldserver;
-extern TaskManager *task_manager;
 extern FastMath g_Math;
 void CatchSignal(int sig_num);
 
@@ -89,7 +85,6 @@ int command_init(void)
 
 	if (
 		command_add("acceptrules", "[acceptrules] - Accept the EQEmu Agreement", AccountStatus::Player, command_acceptrules) ||
-		command_add("advnpcspawn", "[maketype|makegroup|addgroupentry|addgroupspawn][removegroupspawn|movespawn|editgroupbox|cleargroupbox]", AccountStatus::GMLeadAdmin, command_advnpcspawn) ||
 		command_add("aggro", "[Distance] [-v] - Display aggro information for all mobs 'Distance' distance from your target. (-v is verbose Faction Information)", AccountStatus::QuestTroupe, command_aggro) ||
 		command_add("aggrozone", "[aggro] - Aggro every mob in the zone with X aggro. Default is 0. Not recommend if you're not invulnerable.", AccountStatus::GMAdmin, command_aggrozone) ||
 		command_add("ai", "[factionid/spellslist/con/guard/roambox/stop/start] - Modify AI on NPC target", AccountStatus::GMAdmin, command_ai) ||
@@ -124,13 +119,10 @@ int command_init(void)
 		command_add("depopzone", "[Start Spawn Timers] - Depop the zone and optionally start spawn timers (false by default)", AccountStatus::GMAdmin, command_depopzone) ||
 		command_add("devtools", "[Enable|Disable] - Manages Developer Tools (send no parameter for menu)", AccountStatus::GMMgmt, command_devtools) ||
 		command_add("disablerecipe", "[Recipe ID] - Disables a Recipe", AccountStatus::QuestTroupe, command_disablerecipe) ||
-		command_add("disarmtrap", "Analog for ldon disarm trap for the newer clients since we still don't have it working.", AccountStatus::QuestTroupe, command_disarmtrap) ||
 		command_add("distance", "Reports the distance between you and your target.", AccountStatus::QuestTroupe, command_distance) ||
 		command_add("door", "Door editing command", AccountStatus::QuestTroupe, command_door) ||
 		command_add("doanim", "[Animation ID|Animation Name] [Speed] - Send an animation by ID or name at the specified speed to you or your target (Speed is optional)", AccountStatus::Guide, command_doanim) ||
 		command_add("dye", "[slot|'help'] [red] [green] [blue] [use_tint] - Dyes the specified armor slot to Red, Green, and Blue provided, allows you to bypass darkness limits.", AccountStatus::ApprenticeGuide, command_dye) ||
-		command_add("dz", "Manage expeditions and dynamic zone instances", AccountStatus::QuestTroupe, command_dz) ||
-		command_add("dzkickplayers", "Removes all players from current expedition. (/kickplayers alternative for pre-RoF clients)", AccountStatus::Player, command_dzkickplayers) ||
 		command_add("editmassrespawn", "[name-search] [second-value] - Mass (Zone wide) NPC respawn timer editing command", AccountStatus::GMAdmin, command_editmassrespawn) ||
 		command_add("emote", "[Name|World|Zone] [type] [message] - Send an emote message by name, to the world, or to your zone (^ separator allows multiple messages to be sent at once)", AccountStatus::QuestTroupe, command_emote) ||
 		command_add("emotesearch", "[Search Criteria] - Search for NPC Emotes", AccountStatus::QuestTroupe, command_emotesearch) ||
@@ -151,7 +143,6 @@ int command_init(void)
 		command_add("findrecipe", "[Search Criteria] - Search for a recipe", AccountStatus::Guide, command_findrecipe) ||
 		command_add("findskill", "[Search Criteria] - Search for a skill", AccountStatus::Guide, command_findskill) ||
 		command_add("findspell", "[Search Criteria] - Search for a spell", AccountStatus::Guide, command_findspell) ||
-		command_add("findtask", "[Search Criteria] - Search for a task", AccountStatus::Guide, command_findtask) ||
 		command_add("findzone", "[Search Criteria] - Search database zones", AccountStatus::GMAdmin, command_findzone) ||
 		command_add("fixmob", "[race|gender|texture|helm|face|hair|haircolor|beard|beardcolor|heritage|tattoo|detail] [next|prev] - Manipulate appearance of your target", AccountStatus::QuestTroupe, command_fixmob) ||
 		command_add("flag", "[Status] [Account Name] - Refresh your admin status, or set an account's Admin status if arguments provided", AccountStatus::Player, command_flag) ||
@@ -171,7 +162,6 @@ int command_init(void)
 		command_add("globalview", "Lists all qglobals in cache if you were to do a quest with this target.", AccountStatus::QuestTroupe, command_globalview) ||
 		command_add("gm", "[On|Off] - Modify your or your target's GM Flag", AccountStatus::QuestTroupe, command_gm) ||
 		command_add("gmspeed", "[On|Off] - Turn GM Speed On or Off for you or your player target", AccountStatus::GMAdmin, command_gmspeed) ||
-		command_add("gmzone", "[Zone ID|Zone Short Name] [Version] [Instance Identifier] - Zones to a private GM instance (Version defaults to 0 and Instance Identifier defaults to 'gmzone' if not used)", AccountStatus::GMAdmin, command_gmzone) ||
 		command_add("godmode", "[on/off] - Turns on/off hideme, gmspeed, invul, and flymode.", AccountStatus::GMMgmt, command_godmode) ||
 		command_add("goto", "[playername] or [x y z] [h] - Teleport to the provided coordinates or to your target", AccountStatus::Steward, command_goto) ||
 		command_add("grid", "[add/delete] [grid_num] [wandertype] [pausetype] - Create/delete a wandering grid", AccountStatus::GMAreas, command_grid) ||
@@ -188,7 +178,6 @@ int command_init(void)
 		command_add("hotfix", "[hotfix_name] - Reloads shared memory into a hotfix, equiv to load_shared_memory followed by apply_shared_memory", AccountStatus::GMImpossible, command_hotfix) ||
 		command_add("hp", "Refresh your HP bar from the server.", AccountStatus::Player, command_hp) ||
 		command_add("incstat", "Increases or Decreases a client's stats permanently.", AccountStatus::GMMgmt, command_incstat) ||
-		command_add("instance", "Modify Instances", AccountStatus::GMMgmt, command_instance) ||
 		command_add("interrogateinv", "use [help] argument for available options", AccountStatus::Player, command_interrogateinv) ||
 		command_add("interrupt", "[message id] [color] - Interrupt your casting. Arguments are optional.", AccountStatus::Guide, command_interrupt) ||
 		command_add("invsnapshot", "Manipulates inventory snapshots for your current target", AccountStatus::QuestTroupe, command_invsnapshot) ||
@@ -242,14 +231,12 @@ int command_init(void)
 		command_add("opcode", "Reloads all server patches", AccountStatus::GMImpossible, command_opcode) ||
 		command_add("path", "view and edit pathing", AccountStatus::GMMgmt, command_path) ||
 		command_add("peekinv", "[equip/gen/cursor/poss/limbo/curlim/trib/bank/shbank/allbank/trade/world/all] - Print out contents of your player target's inventory", AccountStatus::GMAdmin, command_peekinv) ||
-		command_add("peqzone", "[Zone ID|Zone Short Name] - Teleports you to the specified zone if you meet the requirements.", AccountStatus::Player, command_peqzone) ||
 		command_add("peqzone_flags", "displays the PEQZone Flags of you or your target", AccountStatus::Player, command_peqzone_flags) ||
 		command_add("permaclass", "[Class ID] - Change your or your player target's class, changed client is disconnected", AccountStatus::QuestTroupe, command_permaclass) ||
 		command_add("permagender", "[Gender ID] - Change your or your player target's gender", AccountStatus::QuestTroupe, command_permagender) ||
 		command_add("permarace", "[Race ID] - Change your or your player target's race", AccountStatus::QuestTroupe, command_permarace) ||
 		command_add("petitems", "View your pet's items if you have one", AccountStatus::ApprenticeGuide, command_petitems) ||
 		command_add("petitioninfo", "[petition number] - Get info about a petition", AccountStatus::ApprenticeGuide, command_petitioninfo) ||
-		command_add("picklock", "Analog for ldon pick lock for the newer clients since we still don't have it working.", AccountStatus::Player, command_picklock) ||
 		command_add("profanity", "Manage censored language.", AccountStatus::GMLeadAdmin, command_profanity) ||
 		command_add("push", "[Back Push] [Up Push] - Lets you do spell push on an NPC", AccountStatus::GMLeadAdmin, command_push) ||
 		command_add("proximity", "Shows NPC proximity", AccountStatus::GMLeadAdmin, command_proximity) ||
@@ -274,13 +261,11 @@ int command_init(void)
 		command_add("scribespell", "[Spell ID] - Scribe a spell by ID to your or your target's spell book.", AccountStatus::GMCoder, command_scribespell) ||
 		command_add("scribespells", "[Max level] [Min level] - Scribe all spells for you or your player target that are usable by them, up to level specified. (may freeze client for a few seconds)", AccountStatus::GMLeadAdmin, command_scribespells) ||
 		command_add("sendzonespawns", "Refresh spawn list for all clients in zone", AccountStatus::GMLeadAdmin, command_sendzonespawns) ||
-		command_add("sensetrap", "Analog for ldon sense trap for the newer clients since we still don't have it working.", AccountStatus::Player, command_sensetrap) ||
 		command_add("serverinfo", "Get CPU, Operating System, and Process Information about the server", AccountStatus::GMMgmt, command_serverinfo) ||
 		command_add("serverlock", "[0|1] - Lock or Unlock the World Server (0 = Unlocked, 1 = Locked)", AccountStatus::GMLeadAdmin, command_serverlock) ||
 		command_add("serverrules", "Read this server's rules", AccountStatus::Player, command_serverrules) ||
 		command_add("setaapts", "[AA|Group|Raid] [AA Amount] - Set your or your player target's Available AA Points by Type", AccountStatus::GMAdmin, command_setaapts) ||
 		command_add("setaaxp", "[AA|Group|Raid] [AA Experience] - Set your or your player target's AA Experience by Type", AccountStatus::GMAdmin, command_setaaxp) ||
-		command_add("setadventurepoints", "[Theme] [Points] - Set your or your player target's available Adventure Points by Theme", AccountStatus::GMLeadAdmin, command_set_adventure_points) ||
 		command_add("setaltcurrency", "[Currency ID] [Amount] - Set your or your target's available Alternate Currency by Currency ID", AccountStatus::GMAdmin, command_setaltcurrency) ||
 		command_add("setanim", "[Animation ID (IDs are 0 to 4)] - Set target's appearance to Animation ID", AccountStatus::GMMgmt, command_setanim) ||
 		command_add("setcrystals", "[value] - Set your or your player target's available radiant or ebon crystals", AccountStatus::GMAdmin, command_setcrystals) ||
@@ -317,7 +302,6 @@ int command_init(void)
 		command_add("summonburiedplayercorpse", "Summons the target's oldest buried corpse, if any exist.", AccountStatus::GMAdmin, command_summonburiedplayercorpse) ||
 		command_add("summonitem", "[itemid] [charges] - Summon an item onto your cursor. Charges are optional.", AccountStatus::GMMgmt, command_summonitem) ||
 		command_add("suspend", "[name] [days] [reason] - Suspend by character name and for specificed number of days", AccountStatus::GMLeadAdmin, command_suspend) ||
-		command_add("task", "(subcommand) - Task system commands", AccountStatus::GMLeadAdmin, command_task) ||
 		command_add("tempname", "[newname] - Temporarily renames your target. Leave name blank to restore the original name.", AccountStatus::GMAdmin, command_tempname) ||
 		command_add("petname", "[newname] - Temporarily renames your pet. Leave name blank to restore the original name.", AccountStatus::GMAdmin, command_petname) ||
 		command_add("texture", "[Texture] [Helmet Texture] - Change your or your target's texture (Helmet Texture defaults to 0 if not used)", AccountStatus::Steward, command_texture) ||
@@ -360,7 +344,6 @@ int command_init(void)
 		command_add("zheader", "[Zone ID|Zone Short Name] [Version] - Load a zone header from the database", AccountStatus::QuestTroupe, command_zheader) ||
 		command_add("zone", "[Zone ID|Zone Short Name] [X] [Y] [Z] - Teleport to specified Zone by ID or Short Name (coordinates are optional)", AccountStatus::Guide, command_zone) ||
 		command_add("zonebootup", "[ZoneServerID] [shortname] - Make a zone server boot a specific zone", AccountStatus::GMLeadAdmin, command_zonebootup) ||
-		command_add("zoneinstance", "[Instance ID] [X] [Y] [Z] - Teleport to specified Instance by ID (coordinates are optional)", AccountStatus::Guide, command_zone_instance) ||
 		command_add("zonelock", "[List|Lock|Unlock] [Zone ID|Zone Short Name] - Set or get lock status of a Zone by ID or Short Name", AccountStatus::GMAdmin, command_zonelock) ||
 		command_add("zoneshutdown", "[shortname] - Shut down a zone server", AccountStatus::GMLeadAdmin, command_zoneshutdown) ||
 		command_add("zonestatus", "Show connected zoneservers, synonymous with /servers", AccountStatus::GMLeadAdmin, command_zonestatus) ||
@@ -580,8 +563,7 @@ int command_realdispatch(Client *c, std::string message, bool ignore_status)
 		auto event_desc = fmt::format(
 			"Issued command :: '{}' in Zone ID: {} Instance ID: {}",
 			message,
-			c->GetZoneID(),
-			c->GetInstanceID()
+			c->GetZoneID()
 		);
 		QServ->PlayerLogEvent(Player_Log_Issued_Commands, c->CharacterID(), event_desc);
 	}
@@ -933,7 +915,6 @@ void command_bot(Client *c, const Seperator *sep)
 #endif
 
 #include "gm_commands/acceptrules.cpp"
-#include "gm_commands/advnpcspawn.cpp"
 #include "gm_commands/aggro.cpp"
 #include "gm_commands/aggrozone.cpp"
 #include "gm_commands/ai.cpp"
@@ -962,15 +943,12 @@ void command_bot(Client *c, const Seperator *sep)
 #include "gm_commands/depopzone.cpp"
 #include "gm_commands/devtools.cpp"
 #include "gm_commands/disablerecipe.cpp"
-#include "gm_commands/disarmtrap.cpp"
 #include "gm_commands/distance.cpp"
 #include "gm_commands/doanim.cpp"
 #include "gm_commands/door.cpp"
 #include "gm_commands/door_manipulation.cpp"
 #include "gm_commands/door_manipulation.h"
 #include "gm_commands/dye.cpp"
-#include "gm_commands/dz.cpp"
-#include "gm_commands/dzkickplayers.cpp"
 #include "gm_commands/editmassrespawn.cpp"
 #include "gm_commands/emote.cpp"
 #include "gm_commands/emotesearch.cpp"
@@ -989,7 +967,6 @@ void command_bot(Client *c, const Seperator *sep)
 #include "gm_commands/findrecipe.cpp"
 #include "gm_commands/findskill.cpp"
 #include "gm_commands/findspell.cpp"
-#include "gm_commands/findtask.cpp"
 #include "gm_commands/findzone.cpp"
 #include "gm_commands/fixmob.cpp"
 #include "gm_commands/flag.cpp"
@@ -1009,7 +986,6 @@ void command_bot(Client *c, const Seperator *sep)
 #include "gm_commands/globalview.cpp"
 #include "gm_commands/gm.cpp"
 #include "gm_commands/gmspeed.cpp"
-#include "gm_commands/gmzone.cpp"
 #include "gm_commands/godmode.cpp"
 #include "gm_commands/goto.cpp"
 #include "gm_commands/grid.cpp"
@@ -1024,7 +1000,6 @@ void command_bot(Client *c, const Seperator *sep)
 #include "gm_commands/hideme.cpp"
 #include "gm_commands/hp.cpp"
 #include "gm_commands/incstat.cpp"
-#include "gm_commands/instance.cpp"
 #include "gm_commands/interrogateinv.cpp"
 #include "gm_commands/interrupt.cpp"
 #include "gm_commands/invsnapshot.cpp"
@@ -1078,7 +1053,6 @@ void command_bot(Client *c, const Seperator *sep)
 #include "gm_commands/opcode.cpp"
 #include "gm_commands/path.cpp"
 #include "gm_commands/peekinv.cpp"
-#include "gm_commands/peqzone.cpp"
 #include "gm_commands/peqzone_flags.cpp"
 #include "gm_commands/permaclass.cpp"
 #include "gm_commands/permagender.cpp"
@@ -1086,7 +1060,6 @@ void command_bot(Client *c, const Seperator *sep)
 #include "gm_commands/petitems.cpp"
 #include "gm_commands/petitioninfo.cpp"
 #include "gm_commands/petname.cpp"
-#include "gm_commands/picklock.cpp"
 #include "gm_commands/profanity.cpp"
 #include "gm_commands/proximity.cpp"
 #include "gm_commands/push.cpp"
@@ -1111,11 +1084,9 @@ void command_bot(Client *c, const Seperator *sep)
 #include "gm_commands/scribespell.cpp"
 #include "gm_commands/scribespells.cpp"
 #include "gm_commands/sendzonespawns.cpp"
-#include "gm_commands/sensetrap.cpp"
 #include "gm_commands/serverinfo.cpp"
 #include "gm_commands/serverlock.cpp"
 #include "gm_commands/serverrules.cpp"
-#include "gm_commands/set_adventure_points.cpp"
 #include "gm_commands/setaapts.cpp"
 #include "gm_commands/setaaxp.cpp"
 #include "gm_commands/setaltcurrency.cpp"
@@ -1155,7 +1126,6 @@ void command_bot(Client *c, const Seperator *sep)
 #include "gm_commands/summonburiedplayercorpse.cpp"
 #include "gm_commands/summonitem.cpp"
 #include "gm_commands/suspend.cpp"
-#include "gm_commands/task.cpp"
 #include "gm_commands/tempname.cpp"
 #include "gm_commands/texture.cpp"
 #include "gm_commands/time.cpp"
@@ -1200,7 +1170,6 @@ void command_bot(Client *c, const Seperator *sep)
 #include "gm_commands/zonelock.cpp"
 #include "gm_commands/zoneshutdown.cpp"
 #include "gm_commands/zonestatus.cpp"
-#include "gm_commands/zone_instance.cpp"
 #include "gm_commands/zopp.cpp"
 #include "gm_commands/zsafecoords.cpp"
 #include "gm_commands/zsave.cpp"

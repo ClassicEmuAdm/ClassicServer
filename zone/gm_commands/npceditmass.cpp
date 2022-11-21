@@ -111,13 +111,12 @@ void command_npceditmass(Client *c, const Seperator *sep)
 				FROM spawnentry
 				JOIN spawn2
 				ON spawn2.spawngroupID = spawnentry.spawngroupID
-				WHERE spawn2.zone = '{}' AND spawn2.version = {}
+				WHERE spawn2.zone = '{}'
 			)
 		),
 		search_column,
 		change_column,
-		zone->GetShortName(),
-		zone->GetInstanceVersion()
+		zone->GetShortName()
 	);
 
 	std::string status = "(Searching)";

@@ -423,7 +423,6 @@ void ClientList::ClientUpdate(ZoneServer *zoneserver, ServerClientList_Struct *s
 		" wid [{}]"
 		" IP [{}]"
 		" zone [{}]"
-		" instance_id [{}]"
 		" Admin [{}]"
 		" charid [{}]"
 		" name [{}]"
@@ -448,7 +447,6 @@ void ClientList::ClientUpdate(ZoneServer *zoneserver, ServerClientList_Struct *s
 		scl->wid,
 		scl->IP,
 		scl->zone,
-		scl->instance_id,
 		scl->Admin,
 		scl->charid,
 		scl->name,
@@ -556,7 +554,7 @@ void ClientList::SendOnlineGuildMembers(uint32 FromID, uint32 GuildID)
 
 		Iterator.Advance();
 	}
-	zoneserver_list.SendPacket(from->zone(), from->instance(), pack);
+	zoneserver_list.SendPacket(from->zone(), pack);
 	safe_delete(pack);
 }
 
@@ -1264,8 +1262,7 @@ void ClientList::ZoneBootup(ZoneServer* zs) {
 	while(iterator.MoreElements())
 	{
 		if (iterator.GetData()->WaitingForBootup()) {
-			if (iterator.GetData()->GetZoneID() == zs->GetZoneID()
-				&& iterator.GetData()->GetInstanceID() == zs->GetInstanceID()) {
+			if (iterator.GetData()->GetZoneID() == zs->GetZoneID()) {
 				iterator.GetData()->EnterWorld(false);
 			}
 			else if (iterator.GetData()->WaitingForBootup() == zs->GetID()) {
@@ -1581,7 +1578,6 @@ void ClientList::OnTick(EQ::Timer *t)
 			outclient["Server"]["CompileTime"] = server->GetCompileTime();
 			outclient["Server"]["CPort"] = server->GetCPort();
 			outclient["Server"]["ID"] = server->GetID();
-			outclient["Server"]["InstanceID"] = server->GetInstanceID();
 			outclient["Server"]["IP"] = server->GetIP();
 			outclient["Server"]["LaunchedName"] = server->GetLaunchedName();
 			outclient["Server"]["LaunchName"] = server->GetLaunchName();
@@ -1603,7 +1599,6 @@ void ClientList::OnTick(EQ::Timer *t)
 		outclient["CharID"] = cle->CharID();
 		outclient["name"] = cle->name();
 		outclient["zone"] = cle->zone();
-		outclient["instance"] = cle->instance();
 		outclient["level"] = cle->level();
 		outclient["class_"] = cle->class_();
 		outclient["race"] = cle->race();
@@ -1659,7 +1654,6 @@ void ClientList::GetClientList(Json::Value &response)
 			row["server"]["client_port"]          = server->GetCPort();
 			row["server"]["compile_time"]         = server->GetCompileTime();
 			row["server"]["id"]                   = server->GetID();
-			row["server"]["instance_id"]          = server->GetInstanceID();
 			row["server"]["ip"]                   = server->GetIP();
 			row["server"]["is_booting"]           = server->IsBootingUp();
 			row["server"]["launch_name"]          = server->GetLaunchName();
@@ -1683,7 +1677,6 @@ void ClientList::GetClientList(Json::Value &response)
 		row["client_version"]   = cle->GetClientVersion();
 		row["gm"]               = cle->GetGM();
 		row["guild_id"]         = cle->GuildID();
-		row["instance"]         = cle->instance();
 		row["is_local_client"]  = cle->IsLocalClient();
 		row["level"]            = cle->level();
 		row["lfg"]              = cle->LFG();

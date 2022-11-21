@@ -3424,12 +3424,11 @@ float Mob::MobAngle(Mob *other, float ourx, float oury) const {
 	return angle;
 }
 
-void Mob::SetZone(uint32 zone_id, uint32 instance_id)
+void Mob::SetZone(uint32 zone_id)
 {
 	if(IsClient())
 	{
 		CastToClient()->GetPP().zone_id = zone_id;
-		CastToClient()->GetPP().zoneInstance = instance_id;
 	}
 	Save();
 }
@@ -3727,7 +3726,7 @@ bool Mob::HateSummon() {
 			new_pos = target->TryMoveAlong(new_pos, 5.0f, angle);
 
 			if (target->IsClient())
-				target->CastToClient()->MovePC(zone->GetZoneID(), zone->GetInstanceID(), new_pos.x, new_pos.y, new_pos.z, new_pos.w, 0, SummonPC);
+				target->CastToClient()->MovePC(zone->GetZoneID(), new_pos.x, new_pos.y, new_pos.z, new_pos.w, 0, SummonPC);
 			else
 				target->GMMove(new_pos.x, new_pos.y, new_pos.z, new_pos.w);
 
@@ -5107,7 +5106,6 @@ void Mob::InsertQuestGlobal(int charid, int npcid, int zoneid, const char *varna
 		qgd->char_id = charid;
 		qgd->zone_id = zoneid;
 		qgd->from_zone_id = zone->GetZoneID();
-		qgd->from_instance_id = zone->GetInstanceID();
 		strcpy(qgd->name, varname);
 
 		entity_list.DeleteQGlobal(std::string((char*)qgd->name), qgd->npc_id, qgd->char_id, qgd->zone_id);
@@ -5132,7 +5130,6 @@ void Mob::InsertQuestGlobal(int charid, int npcid, int zoneid, const char *varna
 		strcpy((char*)qgu->value, varvalue);
 		qgu->id = last_id;
 		qgu->from_zone_id = zone->GetZoneID();
-		qgu->from_instance_id = zone->GetInstanceID();
 
 		QGlobal temp;
 		temp.npc_id = npcid;
@@ -5630,7 +5627,7 @@ void Mob::DoGravityEffect()
 		}
 
 		if(IsClient())
-			CastToClient()->MovePC(zone->GetZoneID(), zone->GetInstanceID(), cur_x, cur_y, new_ground, GetHeading());
+			CastToClient()->MovePC(zone->GetZoneID(), cur_x, cur_y, new_ground, GetHeading());
 		else
 			GMMove(cur_x, cur_y, new_ground, GetHeading());
 	}

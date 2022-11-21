@@ -49,8 +49,6 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 #include "../common/zone_numbers.h"
 #include "data_bucket.h"
 #include "event_codes.h"
-#include "expedition.h"
-#include "expedition_database.h"
 #include "guild_mgr.h"
 #include "merc.h"
 #include "petitions.h"
@@ -65,7 +63,6 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 #include "mob_movement_manager.h"
 #include "../common/repositories/character_instance_safereturns_repository.h"
 #include "../common/repositories/criteria/content_filter_criteria.h"
-#include "../common/shared_tasks.h"
 #include "gm_commands/door_manipulation.h"
 #include "client.h"
 #include "../common/repositories/account_repository.h"
@@ -124,14 +121,6 @@ void MapOpcodes()
 	// connected opcode handler assignments:
 	ConnectedOpcodes[OP_0x0193] = &Client::Handle_0x0193;
 	ConnectedOpcodes[OP_AAAction] = &Client::Handle_OP_AAAction;
-	ConnectedOpcodes[OP_AcceptNewTask] = &Client::Handle_OP_AcceptNewTask;
-	ConnectedOpcodes[OP_AdventureInfoRequest] = &Client::Handle_OP_AdventureInfoRequest;
-	ConnectedOpcodes[OP_AdventureLeaderboardRequest] = &Client::Handle_OP_AdventureLeaderboardRequest;
-	ConnectedOpcodes[OP_AdventureMerchantPurchase] = &Client::Handle_OP_AdventureMerchantPurchase;
-	ConnectedOpcodes[OP_AdventureMerchantRequest] = &Client::Handle_OP_AdventureMerchantRequest;
-	ConnectedOpcodes[OP_AdventureMerchantSell] = &Client::Handle_OP_AdventureMerchantSell;
-	ConnectedOpcodes[OP_AdventureRequest] = &Client::Handle_OP_AdventureRequest;
-	ConnectedOpcodes[OP_AdventureStatsRequest] = &Client::Handle_OP_AdventureStatsRequest;
 	ConnectedOpcodes[OP_AggroMeterLockTarget] = &Client::Handle_OP_AggroMeterLockTarget;
 	ConnectedOpcodes[OP_AltCurrencyMerchantRequest] = &Client::Handle_OP_AltCurrencyMerchantRequest;
 	ConnectedOpcodes[OP_AltCurrencyPurchase] = &Client::Handle_OP_AltCurrencyPurchase;
@@ -160,7 +149,6 @@ void MapOpcodes()
 	ConnectedOpcodes[OP_BuffRemoveRequest] = &Client::Handle_OP_BuffRemoveRequest;
 	ConnectedOpcodes[OP_Bug] = &Client::Handle_OP_Bug;
 	ConnectedOpcodes[OP_Camp] = &Client::Handle_OP_Camp;
-	ConnectedOpcodes[OP_CancelTask] = &Client::Handle_OP_CancelTask;
 	ConnectedOpcodes[OP_CancelTrade] = &Client::Handle_OP_CancelTrade;
 	ConnectedOpcodes[OP_CastSpell] = &Client::Handle_OP_CastSpell;
 	ConnectedOpcodes[OP_ChannelMessage] = &Client::Handle_OP_ChannelMessage;
@@ -199,15 +187,6 @@ void MapOpcodes()
 	ConnectedOpcodes[OP_DuelAccept] = &Client::Handle_OP_DuelAccept;
 	ConnectedOpcodes[OP_DumpName] = &Client::Handle_OP_DumpName;
 	ConnectedOpcodes[OP_Dye] = &Client::Handle_OP_Dye;
-	ConnectedOpcodes[OP_DzAddPlayer] = &Client::Handle_OP_DzAddPlayer;
-	ConnectedOpcodes[OP_DzChooseZoneReply] = &Client::Handle_OP_DzChooseZoneReply;
-	ConnectedOpcodes[OP_DzExpeditionInviteResponse] = &Client::Handle_OP_DzExpeditionInviteResponse;
-	ConnectedOpcodes[OP_DzListTimers] = &Client::Handle_OP_DzListTimers;
-	ConnectedOpcodes[OP_DzMakeLeader] = &Client::Handle_OP_DzMakeLeader;
-	ConnectedOpcodes[OP_DzPlayerList] = &Client::Handle_OP_DzPlayerList;
-	ConnectedOpcodes[OP_DzRemovePlayer] = &Client::Handle_OP_DzRemovePlayer;
-	ConnectedOpcodes[OP_DzSwapPlayer] = &Client::Handle_OP_DzSwapPlayer;
-	ConnectedOpcodes[OP_DzQuit] = &Client::Handle_OP_DzQuit;
 	ConnectedOpcodes[OP_Emote] = &Client::Handle_OP_Emote;
 	ConnectedOpcodes[OP_EndLootRequest] = &Client::Handle_OP_EndLootRequest;
 	ConnectedOpcodes[OP_EnvDamage] = &Client::Handle_OP_EnvDamage;
@@ -252,7 +231,6 @@ void MapOpcodes()
 	ConnectedOpcodes[OP_GroupMentor] = &Client::Handle_OP_GroupMentor;
 	ConnectedOpcodes[OP_GroupRoles] = &Client::Handle_OP_GroupRoles;
 	ConnectedOpcodes[OP_GroupUpdate] = &Client::Handle_OP_GroupUpdate;
-	ConnectedOpcodes[OP_GuildBank] = &Client::Handle_OP_GuildBank;
 	ConnectedOpcodes[OP_GuildCreate] = &Client::Handle_OP_GuildCreate;
 	ConnectedOpcodes[OP_GuildDelete] = &Client::Handle_OP_GuildDelete;
 	ConnectedOpcodes[OP_GuildDemote] = &Client::Handle_OP_GuildDemote;
@@ -284,18 +262,10 @@ void MapOpcodes()
 	ConnectedOpcodes[OP_Jump] = &Client::Handle_OP_Jump;
 	ConnectedOpcodes[OP_KeyRing] = &Client::Handle_OP_KeyRing;
 	ConnectedOpcodes[OP_KickPlayers] = &Client::Handle_OP_KickPlayers;
-	ConnectedOpcodes[OP_LDoNButton] = &Client::Handle_OP_LDoNButton;
-	ConnectedOpcodes[OP_LDoNDisarmTraps] = &Client::Handle_OP_LDoNDisarmTraps;
-	ConnectedOpcodes[OP_LDoNInspect] = &Client::Handle_OP_LDoNInspect;
-	ConnectedOpcodes[OP_LDoNOpen] = &Client::Handle_OP_LDoNOpen;
-	ConnectedOpcodes[OP_LDoNPickLock] = &Client::Handle_OP_LDoNPickLock;
-	ConnectedOpcodes[OP_LDoNSenseTraps] = &Client::Handle_OP_LDoNSenseTraps;
 	ConnectedOpcodes[OP_LeadershipExpToggle] = &Client::Handle_OP_LeadershipExpToggle;
-	ConnectedOpcodes[OP_LeaveAdventure] = &Client::Handle_OP_LeaveAdventure;
 	ConnectedOpcodes[OP_LeaveBoat] = &Client::Handle_OP_LeaveBoat;
 	ConnectedOpcodes[OP_LFGCommand] = &Client::Handle_OP_LFGCommand;
 	ConnectedOpcodes[OP_LFGGetMatchesRequest] = &Client::Handle_OP_LFGGetMatchesRequest;
-	ConnectedOpcodes[OP_LFGuild] = &Client::Handle_OP_LFGuild;
 	ConnectedOpcodes[OP_LFPCommand] = &Client::Handle_OP_LFPCommand;
 	ConnectedOpcodes[OP_LFPGetMatchesRequest] = &Client::Handle_OP_LFPGetMatchesRequest;
 	ConnectedOpcodes[OP_LoadSpellSet] = &Client::Handle_OP_LoadSpellSet;
@@ -305,13 +275,6 @@ void MapOpcodes()
 	ConnectedOpcodes[OP_ManaChange] = &Client::Handle_OP_ManaChange;
 	ConnectedOpcodes[OP_MemorizeSpell] = &Client::Handle_OP_MemorizeSpell;
 	ConnectedOpcodes[OP_Mend] = &Client::Handle_OP_Mend;
-	ConnectedOpcodes[OP_MercenaryCommand] = &Client::Handle_OP_MercenaryCommand;
-	ConnectedOpcodes[OP_MercenaryDataRequest] = &Client::Handle_OP_MercenaryDataRequest;
-	ConnectedOpcodes[OP_MercenaryDataUpdateRequest] = &Client::Handle_OP_MercenaryDataUpdateRequest;
-	ConnectedOpcodes[OP_MercenaryDismiss] = &Client::Handle_OP_MercenaryDismiss;
-	ConnectedOpcodes[OP_MercenaryHire] = &Client::Handle_OP_MercenaryHire;
-	ConnectedOpcodes[OP_MercenarySuspendRequest] = &Client::Handle_OP_MercenarySuspendRequest;
-	ConnectedOpcodes[OP_MercenaryTimerRequest] = &Client::Handle_OP_MercenaryTimerRequest;
 	ConnectedOpcodes[OP_MoveCoin] = &Client::Handle_OP_MoveCoin;
 	ConnectedOpcodes[OP_MoveItem] = &Client::Handle_OP_MoveItem;
 	ConnectedOpcodes[OP_MoveMultipleItems] = &Client::Handle_OP_MoveMultipleItems;
@@ -386,8 +349,6 @@ void MapOpcodes()
 	ConnectedOpcodes[OP_SwapSpell] = &Client::Handle_OP_SwapSpell;
 	ConnectedOpcodes[OP_TargetCommand] = &Client::Handle_OP_TargetCommand;
 	ConnectedOpcodes[OP_TargetMouse] = &Client::Handle_OP_TargetMouse;
-	ConnectedOpcodes[OP_TaskHistoryRequest] = &Client::Handle_OP_TaskHistoryRequest;
-	ConnectedOpcodes[OP_TaskTimers] = &Client::Handle_OP_TaskTimers;
 	ConnectedOpcodes[OP_Taunt] = &Client::Handle_OP_Taunt;
 	ConnectedOpcodes[OP_TestBuff] = &Client::Handle_OP_TestBuff;
 	ConnectedOpcodes[OP_TGB] = &Client::Handle_OP_TGB;
@@ -421,15 +382,6 @@ void MapOpcodes()
 	ConnectedOpcodes[OP_ZoneChange] = &Client::Handle_OP_ZoneChange;
 	ConnectedOpcodes[OP_ResetAA] = &Client::Handle_OP_ResetAA;
 	ConnectedOpcodes[OP_UnderWorld] = &Client::Handle_OP_UnderWorld;
-
-	// shared tasks
-	ConnectedOpcodes[OP_SharedTaskRemovePlayer]   = &Client::Handle_OP_SharedTaskRemovePlayer;
-	ConnectedOpcodes[OP_SharedTaskAddPlayer]      = &Client::Handle_OP_SharedTaskAddPlayer;
-	ConnectedOpcodes[OP_SharedTaskMakeLeader]     = &Client::Handle_OP_SharedTaskMakeLeader;
-	ConnectedOpcodes[OP_SharedTaskInviteResponse] = &Client::Handle_OP_SharedTaskInviteResponse;
-	ConnectedOpcodes[OP_SharedTaskAcceptNew]      = &Client::Handle_OP_SharedTaskAccept;
-	ConnectedOpcodes[OP_SharedTaskQuit]           = &Client::Handle_OP_SharedTaskQuit;
-	ConnectedOpcodes[OP_SharedTaskPlayerList]     = &Client::Handle_OP_SharedTaskPlayerList;
 }
 
 void ClearMappedOpcode(EmuOpcode op)
@@ -533,9 +485,6 @@ void Client::CompleteConnect()
 
 	/* Sets GM Flag if needed & Sends Petition Queue */
 	UpdateAdmin(false);
-
-	// Task Packets
-	LoadClientTaskState();
 
 	if (IsInAGuild()) {
 		uint8 rank = GuildRank();
@@ -764,11 +713,6 @@ void Client::CompleteConnect()
 	if (GetGroup())
 		database.RefreshGroupFromDB(this);
 
-	if (RuleB(TaskSystem, EnableTaskSystem))
-		TaskPeriodic_Timer.Start();
-	else
-		TaskPeriodic_Timer.Disable();
-
 	conn_state = ClientConnectFinished;
 
 	if (zone)
@@ -786,7 +730,7 @@ void Client::CompleteConnect()
 		parse->EventPlayer(EVENT_CONNECT, this, "", 0);
 		/* QS: PlayerLogConnectDisconnect */
 		if (RuleB(QueryServ, PlayerLogConnectDisconnect)) {
-			std::string event_desc = StringFormat("Connect :: Logged into zoneid:%i instid:%i", GetZoneID(), GetInstanceID());
+			std::string event_desc = StringFormat("Connect :: Logged into zoneid:%i instid:%i", GetZoneID());
 			QServ->PlayerLogEvent(Player_Log_Connect_State, CharacterID(), event_desc);
 		}
 
@@ -798,20 +742,6 @@ void Client::CompleteConnect()
 				"UPDATE `character_data` SET `last_login` = UNIX_TIMESTAMP() WHERE id = %u",
 				CharacterID()
 			)
-		);
-	}
-
-	if (zone && zone->GetInstanceTimer()) {
-		bool is_permanent = false;
-		uint32 remaining_time = database.GetTimeRemainingInstance(zone->GetInstanceID(), is_permanent);
-		auto time_string = Strings::SecondsToTime(remaining_time);
-		Message(
-			Chat::Yellow,
-			fmt::format(
-				"{} will expire in {}.",
-				zone->GetZoneDescription(),
-				time_string
-			).c_str()
 		);
 	}
 
@@ -828,9 +758,6 @@ void Client::CompleteConnect()
 	CalcItemScale();
 	DoItemEnterZone();
 
-	if (zone->GetZoneID() == RuleI(World, GuildBankZoneID) && GuildBanks)
-		GuildBanks->SendGuildBank(this);
-
 	if (ClientVersion() >= EQ::versions::ClientVersion::SoD)
 		entity_list.SendFindableNPCList(this);
 
@@ -839,8 +766,6 @@ void Client::CompleteConnect()
 		guild_mgr.SendGuildMemberUpdateToWorld(GetName(), GuildID(), zone->GetZoneID(), time(nullptr));
 		guild_mgr.RequestOnlineGuildMembers(CharacterID(), GuildID());
 	}
-
-	SendDynamicZoneUpdates();
 
 	/** Request adventure info **/
 	auto pack = new ServerPacket(ServerOP_AdventureDataRequest, 64);
@@ -881,32 +806,12 @@ void Client::CompleteConnect()
 		ShowDevToolsMenu();
 	}
 
-	// shared tasks memberlist
-	if (RuleB(TaskSystem, EnableTaskSystem) && GetTaskState()->HasActiveSharedTask()) {
-
-		// struct
-		auto p = new ServerPacket(
-			ServerOP_SharedTaskRequestMemberlist,
-			sizeof(ServerSharedTaskRequestMemberlist_Struct)
-		);
-
-		auto *r = (ServerSharedTaskRequestMemberlist_Struct *) p->pBuffer;
-
-		// fill
-		r->source_character_id = CharacterID();
-		r->task_id             = GetTaskState()->GetActiveSharedTask().task_id;
-
-		// send
-		worldserver.SendPacket(p);
-		safe_delete(p);
-	}
-
 	heroforge_wearchange_timer.Start(250);
 
 	// enforce some rules..
 	if (!CanBeInZone()) {
 		LogInfo("Kicking character [{}] from zone, not allowed here (missing requirements)", GetCleanName());
-		GoToSafeCoords(ZoneID("arena"), 0);
+		GoToSafeCoords(ZoneID("arena"));
 		return;
 	}
 }
@@ -1255,22 +1160,6 @@ void Client::Handle_Connect_OP_ZoneEntry(const EQApplicationPacket *app)
 	database.LoadCharacterLeadershipAA(cid, &m_pp); /* Load Character Leadership AA's */
 	database.LoadCharacterTribute(cid, &m_pp); /* Load CharacterTribute */
 
-	/* Load AdventureStats */
-	AdventureStats_Struct as;
-	if (database.GetAdventureStats(cid, &as))
-	{
-		m_pp.ldon_wins_guk = as.success.guk;
-		m_pp.ldon_wins_mir = as.success.mir;
-		m_pp.ldon_wins_mmc = as.success.mmc;
-		m_pp.ldon_wins_ruj = as.success.ruj;
-		m_pp.ldon_wins_tak = as.success.tak;
-		m_pp.ldon_losses_guk = as.failure.guk;
-		m_pp.ldon_losses_mir = as.failure.mir;
-		m_pp.ldon_losses_mmc = as.failure.mmc;
-		m_pp.ldon_losses_ruj = as.failure.ruj;
-		m_pp.ldon_losses_tak = as.failure.tak;
-	}
-
 	/* Set item material tint */
 	for (int i = EQ::textures::textureBegin; i <= EQ::textures::LastTexture; i++)
 	{
@@ -1290,7 +1179,6 @@ void Client::Handle_Connect_OP_ZoneEntry(const EQApplicationPacket *app)
 	conn_state = PlayerProfileLoaded;
 
 	m_pp.zone_id = zone->GetZoneID();
-	m_pp.zoneInstance = zone->GetInstanceID();
 
 	/* Set Total Seconds Played */
 	TotalSecondsPlayed = m_pp.timePlayedMin * 60;
@@ -1380,10 +1268,7 @@ void Client::Handle_Connect_OP_ZoneEntry(const EQApplicationPacket *app)
 			}
 		}
 		m_pp.guildrank = rank;
-		if (zone->GetZoneID() == RuleI(World, GuildBankZoneID))
-			GuildBanker = (guild_mgr.IsGuildLeader(GuildID(), CharacterID()) || guild_mgr.GetBankerFlag(CharacterID()));
 	}
-	m_pp.guildbanker = GuildBanker;
 
 	switch (race)
 	{
@@ -1408,14 +1293,6 @@ void Client::Handle_Connect_OP_ZoneEntry(const EQApplicationPacket *app)
 	default:
 		size = 0;
 	}
-
-	/* Check for Invalid points */
-	if (m_pp.ldon_points_guk < 0 || m_pp.ldon_points_guk > 2000000000) { m_pp.ldon_points_guk = 0; }
-	if (m_pp.ldon_points_mir < 0 || m_pp.ldon_points_mir > 2000000000) { m_pp.ldon_points_mir = 0; }
-	if (m_pp.ldon_points_mmc < 0 || m_pp.ldon_points_mmc > 2000000000) { m_pp.ldon_points_mmc = 0; }
-	if (m_pp.ldon_points_ruj < 0 || m_pp.ldon_points_ruj > 2000000000) { m_pp.ldon_points_ruj = 0; }
-	if (m_pp.ldon_points_tak < 0 || m_pp.ldon_points_tak > 2000000000) { m_pp.ldon_points_tak = 0; }
-	if (m_pp.ldon_points_available < 0 || m_pp.ldon_points_available > 2000000000) { m_pp.ldon_points_available = 0; }
 
 	if (RuleB(World, UseClientBasedExpansionSettings)) {
 		m_pp.expansions = EQ::expansions::ConvertClientVersionToExpansionsMask(ClientVersion());
@@ -1688,39 +1565,6 @@ void Client::Handle_Connect_OP_ZoneEntry(const EQApplicationPacket *app)
 
 	ApplyWeaponsStance();
 
-	auto dynamic_zone_member_entries = DynamicZoneMembersRepository::GetWhere(database,
-		fmt::format("character_id = {}", CharacterID()));
-
-	for (const auto& entry : dynamic_zone_member_entries)
-	{
-		m_dynamic_zone_ids.emplace_back(entry.dynamic_zone_id);
-	}
-
-	m_expedition_id = ExpeditionsRepository::GetIDByMemberID(database, CharacterID());
-
-	auto dz = zone->GetDynamicZone();
-	if (dz && dz->GetSafeReturnLocation().zone_id != 0)
-	{
-		auto safereturn = dz->GetSafeReturnLocation();
-
-		auto safereturn_entry = CharacterInstanceSafereturnsRepository::NewEntity();
-		safereturn_entry.character_id     = CharacterID();
-		safereturn_entry.instance_zone_id = zone->GetZoneID();
-		safereturn_entry.instance_id      = zone->GetInstanceID();
-		safereturn_entry.safe_zone_id     = safereturn.zone_id;
-		safereturn_entry.safe_x           = safereturn.x;
-		safereturn_entry.safe_y           = safereturn.y;
-		safereturn_entry.safe_z           = safereturn.z;
-		safereturn_entry.safe_heading     = safereturn.heading;
-
-		CharacterInstanceSafereturnsRepository::InsertOneOrUpdate(database, safereturn_entry);
-	}
-	else
-	{
-		CharacterInstanceSafereturnsRepository::DeleteWhere(database,
-			fmt::format("character_id = {}", character_id));
-	}
-
 	/**
 	 * DevTools Load Settings
 	 */
@@ -1816,605 +1660,6 @@ void Client::Handle_OP_AAAction(const EQApplicationPacket *app)
 	else {
 		LogAA("Unknown AA action : [{}] [{}] [{}] [{}]", action->action, action->ability, action->target_id, action->exp_value);
 	}
-}
-
-void Client::Handle_OP_AcceptNewTask(const EQApplicationPacket *app)
-{
-
-	if (app->size != sizeof(AcceptNewTask_Struct)) {
-		LogDebug("Size mismatch in OP_AcceptNewTask expected [{}] got [{}]", sizeof(AcceptNewTask_Struct), app->size);
-		DumpPacket(app);
-		return;
-	}
-	AcceptNewTask_Struct *ant = (AcceptNewTask_Struct*)app->pBuffer;
-
-	if (ant->task_id > 0 && RuleB(TaskSystem, EnableTaskSystem) && task_state)
-	{
-		if (task_state->CanAcceptNewTask(this, ant->task_id, ant->task_master_id))
-		{
-			task_state->AcceptNewTask(this, ant->task_id, ant->task_master_id, std::time(nullptr));
-		}
-		task_state->ClearLastOffers();
-	}
-}
-
-void Client::Handle_OP_AdventureInfoRequest(const EQApplicationPacket *app)
-{
-	if (app->size < sizeof(EntityId_Struct))
-	{
-		LogError("Handle_OP_AdventureInfoRequest had a packet that was too small");
-		return;
-	}
-	EntityId_Struct* ent = (EntityId_Struct*)app->pBuffer;
-	Mob * m = entity_list.GetMob(ent->entity_id);
-	if (m && m->IsNPC())
-	{
-		std::map<uint32, std::string>::iterator it;
-		it = zone->adventure_entry_list_flavor.find(m->CastToNPC()->GetAdventureTemplate());
-		if (it != zone->adventure_entry_list_flavor.end())
-		{
-			auto outapp = new EQApplicationPacket(OP_AdventureInfo, (it->second.size() + 2));
-			strn0cpy((char*)outapp->pBuffer, it->second.c_str(), it->second.size());
-			FastQueuePacket(&outapp);
-		}
-		else
-		{
-			if (m->CastToNPC()->GetAdventureTemplate() != 0)
-			{
-				std::string text = "Choose your difficulty and preferred adventure type.";
-				auto outapp = new EQApplicationPacket(OP_AdventureInfo, (text.size() + 2));
-				strn0cpy((char*)outapp->pBuffer, text.c_str(), text.size());
-				FastQueuePacket(&outapp);
-			}
-		}
-	}
-}
-
-void Client::Handle_OP_AdventureLeaderboardRequest(const EQApplicationPacket *app)
-{
-	if (app->size < sizeof(AdventureLeaderboardRequest_Struct))
-	{
-		return;
-	}
-
-	if (adventure_leaderboard_timer)
-	{
-		return;
-	}
-
-	adventure_leaderboard_timer = new Timer(4000);
-	auto pack = new ServerPacket(ServerOP_AdventureLeaderboard, sizeof(ServerLeaderboardRequest_Struct));
-	ServerLeaderboardRequest_Struct *lr = (ServerLeaderboardRequest_Struct*)pack->pBuffer;
-	strcpy(lr->player, GetName());
-
-	AdventureLeaderboardRequest_Struct *lrs = (AdventureLeaderboardRequest_Struct*)app->pBuffer;
-	lr->type = 1 + (lrs->theme * 2) + lrs->type;
-	worldserver.SendPacket(pack);
-	delete pack;
-}
-
-void Client::Handle_OP_AdventureMerchantPurchase(const EQApplicationPacket *app)
-{
-	if (app->size != sizeof(Adventure_Purchase_Struct))
-	{
-		LogError("OP size error: OP_AdventureMerchantPurchase expected:[{}] got:[{}]", sizeof(Adventure_Purchase_Struct), app->size);
-		return;
-	}
-
-	Adventure_Purchase_Struct* aps = (Adventure_Purchase_Struct*)app->pBuffer;
-	uint32 merchantid = 0;
-	Mob* tmp = entity_list.GetMob(aps->npcid);
-	if (tmp == 0 || !tmp->IsNPC() || ((tmp->GetClass() != ADVENTURE_MERCHANT) &&
-		(tmp->GetClass() != DISCORD_MERCHANT) && (tmp->GetClass() != NORRATHS_KEEPERS_MERCHANT) && (tmp->GetClass() != DARK_REIGN_MERCHANT)))
-		return;
-
-	//you have to be somewhat close to them to be properly using them
-	if (DistanceSquared(m_Position, tmp->GetPosition()) > USE_NPC_RANGE2)
-		return;
-
-	merchantid = tmp->CastToNPC()->MerchantType;
-
-	const EQ::ItemData* item = nullptr;
-	bool found = false;
-	std::list<MerchantList> merchantlists = zone->merchanttable[merchantid];
-	for (auto merchantlist : merchantlists) {
-		if (GetLevel() < merchantlist.level_required) {
-			continue;
-		}
-
-		int faction_id = tmp->GetPrimaryFaction();
-		if (faction_id != 0 && GetModCharacterFactionLevel(faction_id) < merchantlist.faction_required) {
-			continue;
-		}
-
-		item = database.GetItem(merchantlist.item);
-		if (!item) {
-			continue;
-		}
-
-		if (item->ID == aps->itemid) { //This check to make sure that the item is actually on the NPC, people attempt to inject packets to get items summoned...
-			found = true;
-			break;
-		}
-	}
-
-	if (!item || !found) {
-		Message(Chat::Red, "Error: The item you purchased does not exist!");
-		return;
-	}
-
-	auto item_cost = item->LDoNPrice;
-	bool cannot_afford = false;
-	std::string merchant_type;
-	if (item_cost < 0) {
-		Message(Chat::Red, "This item cannot be bought.");
-		return;
-	}
-
-	if (aps->Type == LDoNMerchant) {
-		if (m_pp.ldon_points_available < item_cost) {
-			Message(Chat::Red, "You cannot afford that item.");
-			return;
-		}
-
-		if (item->LDoNTheme <= LDoNThemeBits::TAKBit) {
-			uint32 ldon_theme;
-			if (item->LDoNTheme & LDoNThemeBits::TAKBit) {
-				if (m_pp.ldon_points_tak < item_cost) {
-					cannot_afford = true;
-					ldon_theme = LDoNThemes::TAK;
-				}
-			} else if (item->LDoNTheme & LDoNThemeBits::RUJBit) {
-				if (m_pp.ldon_points_ruj < item_cost) {
-					cannot_afford = true;
-					ldon_theme = LDoNThemes::RUJ;
-				}
-			} else if (item->LDoNTheme & LDoNThemeBits::MMCBit) {
-				if (m_pp.ldon_points_mmc < item_cost) {
-					cannot_afford = true;
-					ldon_theme = LDoNThemes::MMC;
-				}
-			} else if (item->LDoNTheme & LDoNThemeBits::MIRBit) {
-				if (m_pp.ldon_points_mir < item_cost) {
-					cannot_afford = true;
-					ldon_theme = LDoNThemes::MIR;
-				}
-			} else if (item->LDoNTheme & LDoNThemeBits::GUKBit) {
-				if (m_pp.ldon_points_guk < item_cost) {
-					cannot_afford = true;
-					ldon_theme = LDoNThemes::GUK;
-				}
-			}
-
-			merchant_type = fmt::format(
-				"{} Point{}",
-				EQ::constants::GetLDoNThemeName(ldon_theme),
-				item_cost != 1 ? "s" : ""
-			);
-		}
-	} else if (aps->Type == DiscordMerchant) {
-		if (GetPVPPoints() < item_cost) {
-			cannot_afford = true;
-			merchant_type = fmt::format(
-				"PVP Point{}",
-				item_cost != 1 ? "s" : ""
-			);
-		}
-	} else if (aps->Type == NorrathsKeepersMerchant) {
-		if (GetRadiantCrystals() < item_cost) {
-			cannot_afford = true;
-			merchant_type = database.CreateItemLink(RuleI(Zone, RadiantCrystalItemID));
-		}
-	} else if (aps->Type == DarkReignMerchant) {
-		if (GetEbonCrystals() < item_cost) {
-			cannot_afford = true;
-			merchant_type = database.CreateItemLink(RuleI(Zone, EbonCrystalItemID));
-		}
-	} else {
-		Message(Chat::Red, "Unknown Adventure Merchant Type.");
-		return;
-	}
-
-	if (cannot_afford && !merchant_type.empty()) {
-		Message(
-			Chat::Red,
-			fmt::format(
-				"You need at least {} {} to purchase this item.",
-				item_cost,
-				merchant_type
-			).c_str()
-		);
-	}
-
-
-	if (CheckLoreConflict(item)) {
-		Message(
-			Chat::Yellow,
-			fmt::format(
-				"You already have a lore {} ({}) in your inventory.",
-				database.CreateItemLink(item->ID),
-				item->ID
-			).c_str()
-		);
-		return;
-	}
-
-	if (aps->Type == LDoNMerchant) {
-		int required_points = item_cost * -1;
-
-		if (!UpdateLDoNPoints(6, required_points)) {
-			return;
-		}
-	}
-	else if (aps->Type == DiscordMerchant)
-	{
-		SetPVPPoints(GetPVPPoints() - item_cost);
-		SendPVPStats();
-	}
-	else if (aps->Type == NorrathsKeepersMerchant)
-	{
-		SetRadiantCrystals(GetRadiantCrystals() - item_cost);
-	}
-	else if (aps->Type == DarkReignMerchant)
-	{
-		SetEbonCrystals(GetEbonCrystals() - (int32)item->LDoNPrice);
-	}
-	int16 charges = 1;
-	if (item->MaxCharges != 0)
-		charges = item->MaxCharges;
-
-	EQ::ItemInstance *inst = database.CreateItem(item, charges);
-	if (!AutoPutLootInInventory(*inst, true, true))
-	{
-		PutLootInInventory(EQ::invslot::slotCursor, *inst);
-	}
-	safe_delete(inst);
-	Save(1);
-}
-
-void Client::Handle_OP_AdventureMerchantRequest(const EQApplicationPacket *app)
-{
-	if (app->size != sizeof(AdventureMerchant_Struct))
-	{
-		LogError("OP size error: OP_AdventureMerchantRequest expected:[{}] got:[{}]", sizeof(AdventureMerchant_Struct), app->size);
-		return;
-	}
-	std::stringstream ss(std::stringstream::in | std::stringstream::out);
-
-	uint8 count = 0;
-	AdventureMerchant_Struct* eid = (AdventureMerchant_Struct*)app->pBuffer;
-	uint32 merchantid = 0;
-
-	Mob* tmp = entity_list.GetMob(eid->entity_id);
-	if (tmp == 0 || !tmp->IsNPC() || ((tmp->GetClass() != ADVENTURE_MERCHANT) &&
-		(tmp->GetClass() != DISCORD_MERCHANT) && (tmp->GetClass() != NORRATHS_KEEPERS_MERCHANT) && (tmp->GetClass() != DARK_REIGN_MERCHANT)))
-		return;
-
-	//you have to be somewhat close to them to be properly using them
-	if (DistanceSquared(m_Position, tmp->GetPosition()) > USE_NPC_RANGE2)
-		return;
-
-	merchantid = tmp->CastToNPC()->MerchantType;
-
-	const EQ::ItemData *item = nullptr;
-	std::list<MerchantList> merlist = zone->merchanttable[merchantid];
-	std::list<MerchantList>::const_iterator itr;
-	for (itr = merlist.begin(); itr != merlist.end() && count<255; ++itr) {
-		const MerchantList &ml = *itr;
-		if (GetLevel() < ml.level_required) {
-			continue;
-		}
-
-		int32 fac = tmp->GetPrimaryFaction();
-		if (fac != 0 && GetModCharacterFactionLevel(fac) < ml.faction_required) {
-			continue;
-		}
-
-		item = database.GetItem(ml.item);
-		if (item) {
-			uint32 theme = LDoNThemes::Unused;
-			if (item->LDoNTheme > LDoNThemeBits::TAKBit) {
-				theme = LDoNThemes::Unused;
-			} else if (item->LDoNTheme & LDoNThemeBits::TAKBit) {
-				theme = LDoNThemes::TAK;
-			} else if (item->LDoNTheme & LDoNThemeBits::RUJBit) {
-				theme = LDoNThemes::RUJ;
-			} else if (item->LDoNTheme & LDoNThemeBits::MMCBit) {
-				theme = LDoNThemes::MMC;
-			} else if (item->LDoNTheme & LDoNThemeBits::RUJBit) {
-				theme = LDoNThemes::MIR;
-			} else if (item->LDoNTheme & LDoNThemeBits::GUKBit) {
-				theme = LDoNThemes::GUK;
-			}
-			ss << "^" << item->Name << "|";
-			ss << item->ID << "|";
-			ss << item->LDoNPrice << "|";
-			ss << theme << "|";
-			ss << (item->Stackable ? 1 : 0) << "|";
-			ss << (item->LoreFlag ? 1 : 0) << "|";
-			ss << item->Races << "|";
-			ss << item->Classes;
-			count++;
-		}
-	}
-	//Count
-	//^Item Name,Item ID,Cost in Points,Theme (0=none),0,1,races bit map,classes bitmap
-	EQApplicationPacket* outapp = new EQApplicationPacket(OP_AdventureMerchantResponse, ss.str().size() + 2);
-	outapp->pBuffer[0] = count;
-	strn0cpy((char*)&outapp->pBuffer[1], ss.str().c_str(), ss.str().size());
-	FastQueuePacket(&outapp);
-}
-
-void Client::Handle_OP_AdventureMerchantSell(const EQApplicationPacket *app)
-{
-	if (app->size != sizeof(Adventure_Sell_Struct))
-	{
-		LogDebug("Size mismatch on OP_AdventureMerchantSell: got [{}] expected [{}]", app->size, sizeof(Adventure_Sell_Struct));
-		DumpPacket(app);
-		return;
-	}
-
-	Adventure_Sell_Struct *ams_in = (Adventure_Sell_Struct*)app->pBuffer;
-
-	Mob* vendor = entity_list.GetMob(ams_in->npcid);
-	if (vendor == 0 || !vendor->IsNPC() || ((vendor->GetClass() != ADVENTURE_MERCHANT) &&
-		(vendor->GetClass() != NORRATHS_KEEPERS_MERCHANT) && (vendor->GetClass() != DARK_REIGN_MERCHANT)))
-	{
-		Message(Chat::Red, "Vendor was not found.");
-		return;
-	}
-
-	if (DistanceSquared(m_Position, vendor->GetPosition())  > USE_NPC_RANGE2)
-	{
-		Message(Chat::Red, "Vendor is out of range.");
-		return;
-	}
-
-	uint32 itemid = GetItemIDAt(ams_in->slot);
-
-	if (itemid == 0)
-	{
-		Message(Chat::Red, "Found no item at that slot.");
-		return;
-	}
-
-	const EQ::ItemData* item = database.GetItem(itemid);
-	EQ::ItemInstance* inst = GetInv().GetItem(ams_in->slot);
-	if (!item || !inst) {
-		Message(Chat::Red, "You seemed to have misplaced that item...");
-		return;
-	}
-
-	// Note that Lucy has ldonsold values of 4 and 5 for items sold by Norrath's Keepers and Dark Reign, whereas 13th Floor
-	// has ldonsold = 0 for these items, so some manual editing of the items DB will be required to support sell back of the
-	// items.
-	//
-	// The Merchant seems to have some other way of knowing whether he will accept the item, other than the ldonsold field,
-	// e.g. if you summon items 76036 and 76053 (good and evil versions of Spell: Ward Of Vengeance), if you are interacting
-	// with a Norrath's Keeper merchant and click on 76036 in your inventory, he says he will give you radiant crystals for
-	// it, but he will refuse for item 76053.
-	//
-	// Similarly, just giving a cloth cap an ldonsold value of 4 will not make the Merchant buy it.
-	//
-	// Note that the the Client will not allow you to sell anything back to a Discord merchant, so there is no need to handle
-	// that case here.
-	if (item->LDoNSold == 0)
-	{
-		Message(Chat::Red, "The merchant does not want that item.");
-		return;
-	}
-
-	if (item->LDoNPrice == 0)
-	{
-		Message(Chat::Red, "The merchant does not want that item.");
-		return;
-	}
-
-	// 06/11/2016 This formula matches RoF2 client side calculation.
-	int32 price = (item->LDoNPrice + 1) * item->LDoNSellBackRate / 100;
-
-	if (price == 0)
-	{
-		Message(Chat::Red, "The merchant does not want that item.");
-		return;
-	}
-
-	if (RuleB(EventLog, RecordSellToMerchant))
-		LogMerchant(this, vendor, ams_in->charges, price, item, false);
-
-	if (!inst->IsStackable())
-	{
-		DeleteItemInInventory(ams_in->slot);
-	}
-	else
-	{
-		if (inst->GetCharges() < ams_in->charges)
-		{
-			ams_in->charges = inst->GetCharges();
-		}
-
-		if (ams_in->charges == 0)
-		{
-			Message(Chat::Red, "Charge mismatch error.");
-			return;
-		}
-
-		DeleteItemInInventory(ams_in->slot, ams_in->charges);
-		price *= ams_in->charges;
-	}
-
-	auto outapp = new EQApplicationPacket(OP_AdventureMerchantSell, sizeof(Adventure_Sell_Struct));
-	Adventure_Sell_Struct *ams = (Adventure_Sell_Struct*)outapp->pBuffer;
-	ams->slot = ams_in->slot;
-	ams->unknown000 = 1;
-	ams->npcid = ams->npcid;
-	ams->charges = ams_in->charges;
-	ams->sell_price = price;
-	FastQueuePacket(&outapp);
-
-	switch (vendor->GetClass())
-	{
-	case ADVENTURE_MERCHANT:
-	{
-		UpdateLDoNPoints(6, price);
-		break;
-	}
-	case NORRATHS_KEEPERS_MERCHANT:
-	{
-		SetRadiantCrystals(GetRadiantCrystals() + price);
-		break;
-	}
-	case DARK_REIGN_MERCHANT:
-	{
-		SetEbonCrystals(GetEbonCrystals() + price);
-		break;
-	}
-
-	default:
-		break;
-	}
-
-	Save(1);
-}
-
-void Client::Handle_OP_AdventureRequest(const EQApplicationPacket *app)
-{
-	if (app->size < sizeof(AdventureRequest_Struct))
-	{
-		LogError("Handle_OP_AdventureRequest had a packet that was too small");
-		return;
-	}
-
-	if (IsOnAdventure())
-	{
-		return;
-	}
-
-	if (!p_timers.Expired(&database, pTimerStartAdventureTimer, false))
-	{
-		return;
-	}
-
-	if (GetPendingAdventureRequest())
-	{
-		return;
-	}
-
-	AdventureRequest_Struct* ars = (AdventureRequest_Struct*)app->pBuffer;
-	uint8 group_members = 0;
-	Raid *r = nullptr;
-	Group *g = nullptr;
-
-	if (IsRaidGrouped())
-	{
-		r = GetRaid();
-		group_members = r->RaidCount();
-	}
-	else if (IsGrouped())
-	{
-		g = GetGroup();
-		group_members = g->GroupCount();
-	}
-	else
-	{
-		return;
-	}
-
-	if (group_members < RuleI(Adventure, MinNumberForGroup) || group_members > RuleI(Adventure, MaxNumberForGroup))
-	{
-		return;
-	}
-
-	Mob* m = entity_list.GetMob(ars->entity_id);
-	uint32 template_id = 0;
-	if (m && m->IsNPC())
-	{
-		template_id = m->CastToNPC()->GetAdventureTemplate();
-	}
-	else
-	{
-		return;
-	}
-
-	auto packet =
-		new ServerPacket(ServerOP_AdventureRequest, sizeof(ServerAdventureRequest_Struct) + (64 * group_members));
-	ServerAdventureRequest_Struct *sar = (ServerAdventureRequest_Struct*)packet->pBuffer;
-	sar->member_count = group_members;
-	sar->risk = ars->risk;
-	sar->type = ars->type;
-	sar->template_id = template_id;
-	strcpy(sar->leader, GetName());
-
-	if (IsRaidGrouped())
-	{
-		int i = 0;
-		for (int x = 0; x < 72; ++x)
-		{
-			if (i == group_members)
-			{
-				break;
-			}
-
-			const char *c_name = nullptr;
-			c_name = r->GetClientNameByIndex(x);
-			if (c_name)
-			{
-				memcpy((packet->pBuffer + sizeof(ServerAdventureRequest_Struct) + (64 * i)), c_name, strlen(c_name));
-				++i;
-			}
-		}
-	}
-	else
-	{
-		int i = 0;
-		for (int x = 0; x < 6; ++x)
-		{
-			if (i == group_members)
-			{
-				break;
-			}
-
-			const char *c_name = nullptr;
-			c_name = g->GetClientNameByIndex(x);
-			if (c_name)
-			{
-				memcpy((packet->pBuffer + sizeof(ServerAdventureRequest_Struct) + (64 * i)), c_name, strlen(c_name));
-				++i;
-			}
-		}
-	}
-
-	worldserver.SendPacket(packet);
-	delete packet;
-	p_timers.Start(pTimerStartAdventureTimer, 5);
-}
-
-void Client::Handle_OP_AdventureStatsRequest(const EQApplicationPacket *app)
-{
-	if (adventure_stats_timer)
-	{
-		return;
-	}
-
-	adventure_stats_timer = new Timer(8000);
-	auto outapp = new EQApplicationPacket(OP_AdventureStatsReply, sizeof(AdventureStats_Struct));
-	AdventureStats_Struct *as = (AdventureStats_Struct*)outapp->pBuffer;
-
-	if (database.GetAdventureStats(CharacterID(), as))
-	{
-		m_pp.ldon_wins_guk = as->success.guk;
-		m_pp.ldon_wins_mir = as->success.mir;
-		m_pp.ldon_wins_mmc = as->success.mmc;
-		m_pp.ldon_wins_ruj = as->success.ruj;
-		m_pp.ldon_wins_tak = as->success.tak;
-		m_pp.ldon_losses_guk = as->failure.guk;
-		m_pp.ldon_losses_mir = as->failure.mir;
-		m_pp.ldon_losses_mmc = as->failure.mmc;
-		m_pp.ldon_losses_ruj = as->failure.ruj;
-		m_pp.ldon_losses_tak = as->failure.tak;
-	}
-
-	FastQueuePacket(&outapp);
 }
 
 void Client::Handle_OP_AggroMeterLockTarget(const EQApplicationPacket *app)
@@ -2565,7 +1810,7 @@ void Client::Handle_OP_AltCurrencyPurchase(const EQApplicationPacket *app)
 
 		/* QS: PlayerLogAlternateCurrencyTransactions :: Merchant Purchase */
 		if (RuleB(QueryServ, PlayerLogAlternateCurrencyTransactions)) {
-			std::string event_desc = StringFormat("Merchant Purchase :: Spent alt_currency_id:%i cost:%i for itemid:%i in zoneid:%i instid:%i", alt_cur_id, cost, item->ID, GetZoneID(), GetInstanceID());
+			std::string event_desc = StringFormat("Merchant Purchase :: Spent alt_currency_id:%i cost:%i for itemid:%i in zoneid:%i", alt_cur_id, cost, item->ID, GetZoneID());
 			QServ->PlayerLogEvent(Player_Log_Alternate_Currency_Transactions, CharacterID(), event_desc);
 		}
 
@@ -2613,7 +1858,7 @@ void Client::Handle_OP_AltCurrencyReclaim(const EQApplicationPacket *app)
 
 			/* QS: PlayerLogAlternateCurrencyTransactions :: Item to Currency */
 			if (RuleB(QueryServ, PlayerLogAlternateCurrencyTransactions)) {
-				std::string event_desc = StringFormat("Reclaim :: Item to Currency :: alt_currency_id:%i amount:%i to currency tab in zoneid:%i instid:%i", reclaim->currency_id, removed, GetZoneID(), GetInstanceID());
+				std::string event_desc = StringFormat("Reclaim :: Item to Currency :: alt_currency_id:%i amount:%i to currency tab in zoneid:%i", reclaim->currency_id, removed, GetZoneID());
 				QServ->PlayerLogEvent(Player_Log_Alternate_Currency_Transactions, CharacterID(), event_desc);
 			}
 		}
@@ -2636,7 +1881,7 @@ void Client::Handle_OP_AltCurrencyReclaim(const EQApplicationPacket *app)
 		}
 		/* QS: PlayerLogAlternateCurrencyTransactions :: Cursor to Item Storage */
 		if (RuleB(QueryServ, PlayerLogAlternateCurrencyTransactions)) {
-			std::string event_desc = StringFormat("Reclaim :: Cursor to Item :: alt_currency_id:%i amount:-%i in zoneid:%i instid:%i", reclaim->currency_id, reclaim->count, GetZoneID(), GetInstanceID());
+			std::string event_desc = StringFormat("Reclaim :: Cursor to Item :: alt_currency_id:%i amount:-%i in zoneid:%i", reclaim->currency_id, reclaim->count, GetZoneID());
 			QServ->PlayerLogEvent(Player_Log_Alternate_Currency_Transactions, CharacterID(), event_desc);
 		}
 	}
@@ -2730,7 +1975,7 @@ void Client::Handle_OP_AltCurrencySell(const EQApplicationPacket *app)
 
 		/* QS: PlayerLogAlternateCurrencyTransactions :: Sold to Merchant*/
 		if (RuleB(QueryServ, PlayerLogAlternateCurrencyTransactions)) {
-			std::string event_desc = StringFormat("Sold to Merchant :: itemid:%u npcid:%u alt_currency_id:%u cost:%u in zoneid:%u instid:%i", item->ID, npc_id, alt_cur_id, cost, GetZoneID(), GetInstanceID());
+			std::string event_desc = StringFormat("Sold to Merchant :: itemid:%u npcid:%u alt_currency_id:%u cost:%u in zoneid:%u", item->ID, npc_id, alt_cur_id, cost, GetZoneID());
 			QServ->PlayerLogEvent(Player_Log_Alternate_Currency_Transactions, CharacterID(), event_desc);
 		}
 
@@ -3978,20 +3223,6 @@ void Client::Handle_OP_Camp(const EQApplicationPacket *app)
 	return;
 }
 
-void Client::Handle_OP_CancelTask(const EQApplicationPacket *app)
-{
-
-	if (app->size != sizeof(CancelTask_Struct)) {
-		LogDebug("Size mismatch in OP_CancelTask expected [{}] got [{}]", sizeof(CancelTask_Struct), app->size);
-		DumpPacket(app);
-		return;
-	}
-	CancelTask_Struct *cts = (CancelTask_Struct*)app->pBuffer;
-
-	if (RuleB(TaskSystem, EnableTaskSystem) && task_state)
-		task_state->CancelTask(this, cts->SequenceNumber, static_cast<TaskType>(cts->type));
-}
-
 void Client::Handle_OP_CancelTrade(const EQApplicationPacket *app)
 {
 	if (app->size != sizeof(CancelTrade_Struct)) {
@@ -4521,8 +3752,6 @@ void Client::Handle_OP_ClientUpdate(const EQApplicationPacket *app) {
 
 	if (proximity_timer.Check()) {
 		entity_list.ProcessMove(this, glm::vec3(cx, cy, cz));
-		if (RuleB(TaskSystem, EnableTaskSystem) && RuleB(TaskSystem, EnableTaskProximity))
-			ProcessTaskProximities(cx, cy, cz);
 
 		m_Proximity = glm::vec3(cx, cy, cz);
 	}
@@ -5635,112 +4864,6 @@ void Client::Handle_OP_Dye(const EQApplicationPacket *app)
 	return;
 }
 
-void Client::Handle_OP_DzAddPlayer(const EQApplicationPacket *app)
-{
-	auto expedition = GetExpedition();
-	if (expedition)
-	{
-		auto dzcmd = reinterpret_cast<ExpeditionCommand_Struct*>(app->pBuffer);
-		expedition->DzAddPlayer(this, dzcmd->name);
-	}
-	else
-	{
-		// the only /dz command that sends an error message if no active expedition
-		Message(Chat::System, DZ_YOU_NOT_ASSIGNED);
-	}
-}
-
-void Client::Handle_OP_DzChooseZoneReply(const EQApplicationPacket *app)
-{
-	auto dzmsg = reinterpret_cast<DynamicZoneChooseZoneReply_Struct*>(app->pBuffer);
-
-	LogDynamicZones("Character [{}] chose DynamicZone [{}]:[{}] type: [{}] with system id: [{}]",
-		CharacterID(), dzmsg->dz_zone_id, dzmsg->dz_instance_id, dzmsg->dz_type, dzmsg->unknown_id2);
-
-	if (!dzmsg->dz_instance_id || !database.VerifyInstanceAlive(dzmsg->dz_instance_id, CharacterID()))
-	{
-		// live just no-ops this without a message
-		LogDynamicZones("Character [{}] chose invalid DynamicZone [{}]:[{}] or is no longer a member",
-			CharacterID(), dzmsg->dz_zone_id, dzmsg->dz_instance_id);
-		return;
-	}
-
-	auto client_dzs = GetDynamicZones();
-	auto it = std::find_if(client_dzs.begin(), client_dzs.end(), [&](const DynamicZone* dz) {
-		return dz->IsSameDz(dzmsg->dz_zone_id, dzmsg->dz_instance_id); });
-
-	if (it != client_dzs.end())
-	{
-		DynamicZoneLocation loc = (*it)->GetZoneInLocation();
-		ZoneMode zone_mode = (*it)->HasZoneInLocation() ? ZoneMode::ZoneSolicited : ZoneMode::ZoneToSafeCoords;
-		MovePC(dzmsg->dz_zone_id, dzmsg->dz_instance_id, loc.x, loc.y, loc.z, loc.heading, 0, zone_mode);
-	}
-}
-
-void Client::Handle_OP_DzExpeditionInviteResponse(const EQApplicationPacket *app)
-{
-	auto expedition = Expedition::FindCachedExpeditionByID(m_pending_expedition_invite.expedition_id);
-	std::string swap_remove_name = m_pending_expedition_invite.swap_remove_name;
-	m_pending_expedition_invite = { 0 }; // clear before re-validating
-
-	if (expedition)
-	{
-		auto dzmsg = reinterpret_cast<ExpeditionInviteResponse_Struct*>(app->pBuffer);
-		expedition->DzInviteResponse(this, dzmsg->accepted, swap_remove_name);
-	}
-}
-
-void Client::Handle_OP_DzListTimers(const EQApplicationPacket *app)
-{
-	DzListTimers();
-}
-
-void Client::Handle_OP_DzMakeLeader(const EQApplicationPacket *app)
-{
-	auto expedition = GetExpedition();
-	if (expedition)
-	{
-		auto dzcmd = reinterpret_cast<ExpeditionCommand_Struct*>(app->pBuffer);
-		expedition->DzMakeLeader(this, dzcmd->name);
-	}
-}
-
-void Client::Handle_OP_DzPlayerList(const EQApplicationPacket *app)
-{
-	auto expedition = GetExpedition();
-	if (expedition) {
-		expedition->DzPlayerList(this);
-	}
-}
-
-void Client::Handle_OP_DzRemovePlayer(const EQApplicationPacket *app)
-{
-	auto expedition = GetExpedition();
-	if (expedition)
-	{
-		auto dzcmd = reinterpret_cast<ExpeditionCommand_Struct*>(app->pBuffer);
-		expedition->DzRemovePlayer(this, dzcmd->name);
-	}
-}
-
-void Client::Handle_OP_DzSwapPlayer(const EQApplicationPacket *app)
-{
-	auto expedition = GetExpedition();
-	if (expedition)
-	{
-		auto dzcmd = reinterpret_cast<ExpeditionCommandSwap_Struct*>(app->pBuffer);
-		expedition->DzSwapPlayer(this, dzcmd->rem_player_name, dzcmd->add_player_name);
-	}
-}
-
-void Client::Handle_OP_DzQuit(const EQApplicationPacket *app)
-{
-	auto expedition = GetExpedition();
-	if (expedition) {
-		expedition->DzQuit(this);
-	}
-}
-
 void Client::Handle_OP_Emote(const EQApplicationPacket *app)
 {
 	if (app->size != sizeof(Emote_Struct)) {
@@ -5995,7 +5118,7 @@ void Client::Handle_OP_FindPersonRequest(const EQApplicationPacket *app)
 		if (!RuleB(Pathing, Find) && RuleB(Bazaar, EnableWarpToTrader) && target->IsClient() && (target->CastToClient()->Trader ||
 			target->CastToClient()->Buyer)) {
 			Message(Chat::Yellow, "Moving you to Trader %s", target->GetName());
-			MovePC(zone->GetZoneID(), zone->GetInstanceID(), target->GetX(), target->GetY(), target->GetZ(), 0.0f);
+			MovePC(zone->GetZoneID(), target->GetX(), target->GetY(), target->GetZ(), 0.0f);
 		}
 
 		if (!RuleB(Pathing, Find) || !zone->pathing)
@@ -6293,7 +5416,7 @@ void Client::Handle_OP_GMGoto(const EQApplicationPacket *app)
 	GMSummon_Struct* gmg = (GMSummon_Struct*)app->pBuffer;
 	Mob* gt = entity_list.GetMob(gmg->charname);
 	if (gt != nullptr) {
-		MovePC(zone->GetZoneID(), zone->GetInstanceID(), gt->GetX(), gt->GetY(), gt->GetZ(), gt->GetHeading());
+		MovePC(zone->GetZoneID(), gt->GetX(), gt->GetY(), gt->GetZ(), gt->GetHeading());
 	}
 	else if (!worldserver.Connected())
 		Message(0, "Error: World server disconnected.");
@@ -6696,7 +5819,7 @@ void Client::Handle_OP_GMZoneRequest2(const EQApplicationPacket *app)
 	}
 
 	uint32 zonereq = *((uint32 *)app->pBuffer);
-	GoToSafeCoords(zonereq, 0);
+	GoToSafeCoords(zonereq);
 	return;
 }
 
@@ -7184,282 +6307,6 @@ void Client::Handle_OP_GroupUpdate(const EQApplicationPacket *app)
 	}
 }
 
-void Client::Handle_OP_GuildBank(const EQApplicationPacket *app)
-{
-	if (!GuildBanks)
-		return;
-
-	if ((int)zone->GetZoneID() != RuleI(World, GuildBankZoneID))
-	{
-		Message(Chat::Red, "The Guild Bank is not available in this zone.");
-
-		return;
-	}
-
-	if (app->size < sizeof(uint32)) {
-		LogError("Wrong size: OP_GuildBank, size=[{}], expected [{}]", app->size, sizeof(uint32));
-		DumpPacket(app);
-		return;
-	}
-
-	char *Buffer = (char *)app->pBuffer;
-
-	uint32 Action = VARSTRUCT_DECODE_TYPE(uint32, Buffer);
-	uint32 sentAction = Action;
-
-	if (!IsInAGuild())
-	{
-		Message(Chat::Red, "You must be in a Guild to use the Guild Bank.");
-
-		if (Action == GuildBankDeposit)
-			GuildBankDepositAck(true, sentAction);
-		else
-			GuildBankAck();
-
-		return;
-	}
-
-	if (!IsGuildBanker())
-	{
-		if ((Action != GuildBankDeposit) && (Action != GuildBankViewItem) && (Action != GuildBankWithdraw))
-		{
-			LogError("Suspected hacking attempt on guild bank from [{}]", GetName());
-
-			GuildBankAck();
-
-			return;
-		}
-	}
-
-	switch (Action)
-	{
-	case GuildBankPromote:
-	{
-		if (GuildBanks->IsAreaFull(GuildID(), GuildBankMainArea))
-		{
-			MessageString(Chat::Red, GUILD_BANK_FULL);
-
-			GuildBankDepositAck(true, sentAction);
-
-			return;
-		}
-
-		GuildBankPromote_Struct *gbps = (GuildBankPromote_Struct*)app->pBuffer;
-
-		int Slot = GuildBanks->Promote(GuildID(), gbps->Slot);
-
-		if (Slot >= 0)
-		{
-			EQ::ItemInstance* inst = GuildBanks->GetItem(GuildID(), GuildBankMainArea, Slot, 1);
-
-			if (inst)
-			{
-				MessageString(Chat::LightGray, GUILD_BANK_TRANSFERRED, inst->GetItem()->Name);
-				safe_delete(inst);
-			}
-		}
-		else
-			Message(Chat::Red, "Unexpected error while moving item into Guild Bank.");
-
-		GuildBankAck();
-
-		break;
-	}
-
-	case GuildBankViewItem:
-	{
-		GuildBankViewItem_Struct *gbvis = (GuildBankViewItem_Struct*)app->pBuffer;
-
-		EQ::ItemInstance* inst = GuildBanks->GetItem(GuildID(), gbvis->Area, gbvis->SlotID, 1);
-
-		if (!inst)
-			break;
-
-		SendItemPacket(0, inst, ItemPacketViewLink);
-
-		safe_delete(inst);
-
-		break;
-	}
-
-	case GuildBankDeposit:	// Deposit Item
-	{
-		if (GuildBanks->IsAreaFull(GuildID(), GuildBankDepositArea))
-		{
-			MessageString(Chat::Red, GUILD_BANK_FULL);
-
-			GuildBankDepositAck(true, sentAction);
-
-			return;
-		}
-
-		EQ::ItemInstance *CursorItemInst = GetInv().GetItem(EQ::invslot::slotCursor);
-
-		bool Allowed = true;
-
-		if (!CursorItemInst)
-		{
-			Message(Chat::Red, "No Item on the cursor.");
-
-			GuildBankDepositAck(true, sentAction);
-
-			return;
-		}
-
-		const EQ::ItemData* CursorItem = CursorItemInst->GetItem();
-
-		if (!CursorItem->NoDrop || CursorItemInst->IsAttuned())
-		{
-			Allowed = false;
-		}
-		else if (CursorItemInst->IsNoneEmptyContainer())
-		{
-			Allowed = false;
-		}
-		else if (CursorItemInst->IsAugmented())
-		{
-			Allowed = false;
-		}
-		else if (CursorItem->NoRent == 0)
-		{
-			Allowed = false;
-		}
-		else if (CursorItem->LoreFlag && GuildBanks->HasItem(GuildID(), CursorItem->ID))
-		{
-			Allowed = false;
-		}
-
-		if (!Allowed)
-		{
-			MessageString(Chat::Red, GUILD_BANK_CANNOT_DEPOSIT);
-			GuildBankDepositAck(true, sentAction);
-
-			return;
-		}
-
-		if (GuildBanks->AddItem(GuildID(), GuildBankDepositArea, CursorItem->ID, CursorItemInst->GetCharges(), GetName(), GuildBankBankerOnly, ""))
-		{
-			GuildBankDepositAck(false, sentAction);
-
-			DeleteItemInInventory(EQ::invslot::slotCursor, 0, false);
-		}
-
-		break;
-	}
-
-	case GuildBankPermissions:
-	{
-		GuildBankPermissions_Struct *gbps = (GuildBankPermissions_Struct*)app->pBuffer;
-
-		if (gbps->Permissions == 1)
-			GuildBanks->SetPermissions(GuildID(), gbps->SlotID, gbps->Permissions, gbps->MemberName);
-		else
-			GuildBanks->SetPermissions(GuildID(), gbps->SlotID, gbps->Permissions, "");
-
-		GuildBankAck();
-		break;
-	}
-
-	case GuildBankWithdraw:
-	{
-		if (GetInv()[EQ::invslot::slotCursor])
-		{
-			MessageString(Chat::Red, GUILD_BANK_EMPTY_HANDS);
-
-			GuildBankAck();
-
-			break;
-		}
-
-		GuildBankWithdrawItem_Struct *gbwis = (GuildBankWithdrawItem_Struct*)app->pBuffer;
-
-		EQ::ItemInstance* inst = GuildBanks->GetItem(GuildID(), gbwis->Area, gbwis->SlotID, gbwis->Quantity);
-
-		if (!inst)
-		{
-			GuildBankAck();
-
-			break;
-		}
-
-		if (!IsGuildBanker() && !GuildBanks->AllowedToWithdraw(GuildID(), gbwis->Area, gbwis->SlotID, GetName()))
-		{
-			LogError("Suspected attempted hack on the guild bank from [{}]", GetName());
-
-			GuildBankAck();
-
-			safe_delete(inst);
-
-			break;
-		}
-
-		if (CheckLoreConflict(inst->GetItem()))
-		{
-			MessageString(Chat::Red, DUP_LORE);
-
-			GuildBankAck();
-
-			safe_delete(inst);
-
-			break;
-		}
-
-		if (gbwis->Quantity > 0)
-		{
-			PushItemOnCursor(*inst);
-
-			SendItemPacket(EQ::invslot::slotCursor, inst, ItemPacketLimbo);
-
-			GuildBanks->DeleteItem(GuildID(), gbwis->Area, gbwis->SlotID, gbwis->Quantity);
-		}
-		else
-		{
-			Message(0, "Unable to withdraw 0 quantity of %s", inst->GetItem()->Name);
-		}
-
-		safe_delete(inst);
-
-		GuildBankAck();
-
-		break;
-	}
-
-	case GuildBankSplitStacks:
-	{
-		if (GuildBanks->IsAreaFull(GuildID(), GuildBankMainArea))
-			MessageString(Chat::Red, GUILD_BANK_FULL);
-		else
-		{
-			GuildBankWithdrawItem_Struct *gbwis = (GuildBankWithdrawItem_Struct*)app->pBuffer;
-
-			GuildBanks->SplitStack(GuildID(), gbwis->SlotID, gbwis->Quantity);
-		}
-
-		GuildBankAck();
-
-		break;
-	}
-
-	case GuildBankMergeStacks:
-	{
-		GuildBankWithdrawItem_Struct *gbwis = (GuildBankWithdrawItem_Struct*)app->pBuffer;
-
-		GuildBanks->MergeStacks(GuildID(), gbwis->SlotID);
-
-		GuildBankAck();
-
-		break;
-	}
-
-	default:
-	{
-		Message(Chat::Red, "Unexpected GuildBank action.");
-
-		LogError("Received unexpected guild bank action code [{}] from [{}]", Action, GetName());
-	}
-	}
-}
-
 void Client::Handle_OP_GuildCreate(const EQApplicationPacket *app)
 {
 	if (IsInAGuild())
@@ -7539,8 +6386,6 @@ void Client::Handle_OP_GuildCreate(const EQApplicationPacket *app)
 		{
 			Message(Chat::Yellow, "You are now the leader of %s", GuildName);
 
-			if (zone->GetZoneID() == RuleI(World, GuildBankZoneID) && GuildBanks)
-				GuildBanks->SendGuildBank(this);
 			SendGuildRanks();
 		}
 	}
@@ -7876,8 +6721,6 @@ void Client::Handle_OP_GuildInviteAccept(const EQApplicationPacket *app)
 				Message(Chat::Red, "There was an error during the invite, DB may now be inconsistent.");
 				return;
 			}
-			if (zone->GetZoneID() == RuleI(World, GuildBankZoneID) && GuildBanks)
-				GuildBanks->SendGuildBank(this);
 		}
 	}
 }
@@ -8719,10 +7562,6 @@ void Client::Handle_OP_ItemPreview(const EQApplicationPacket *app)
 		outapp->WriteUInt32(0); //New RoF 6th Aug Slot
 		outapp->WriteUInt8(1); //^
 		outapp->WriteUInt8(0); //^^
-		outapp->WriteUInt32(item->LDoNSold);
-		outapp->WriteUInt32(item->LDoNTheme);
-		outapp->WriteUInt32(item->LDoNPrice);
-		outapp->WriteUInt32(item->LDoNSellBackRate);
 		for (spacer = 0; spacer < 11; spacer++) { //unknowns
 			outapp->WriteUInt8(0);
 		}
@@ -9078,136 +7917,6 @@ void Client::Handle_OP_KeyRing(const EQApplicationPacket *app)
 void Client::Handle_OP_KickPlayers(const EQApplicationPacket *app)
 {
 	auto buf = reinterpret_cast<KickPlayers_Struct*>(app->pBuffer);
-	if (buf->kick_expedition)
-	{
-		auto expedition = GetExpedition();
-		if (expedition)
-		{
-			expedition->DzKickPlayers(this);
-		}
-	}
-	else if (buf->kick_task && GetTaskState() && GetTaskState()->HasActiveSharedTask())
-	{
-		GetTaskState()->KickPlayersSharedTask(this);
-	}
-}
-
-void Client::Handle_OP_LDoNButton(const EQApplicationPacket *app)
-{
-	if (app->size < sizeof(bool))
-	{
-		return;
-	}
-
-	if (GetPendingAdventureCreate())
-	{
-		return;
-	}
-
-	if (IsOnAdventure())
-	{
-		return;
-	}
-
-	bool* p = (bool*)app->pBuffer;
-	if (*p == true)
-	{
-		auto pack =
-			new ServerPacket(ServerOP_AdventureRequestCreate,
-				sizeof(ServerAdventureRequestCreate_Struct) + (64 * adv_requested_member_count));
-		ServerAdventureRequestCreate_Struct *sac = (ServerAdventureRequestCreate_Struct*)pack->pBuffer;
-		strcpy(sac->leader, GetName());
-		sac->id = adv_requested_id;
-		sac->theme = adv_requested_theme;
-		sac->member_count = adv_requested_member_count;
-		memcpy((pack->pBuffer + sizeof(ServerAdventureRequestCreate_Struct)), adv_requested_data, (64 * adv_requested_member_count));
-		worldserver.SendPacket(pack);
-		delete pack;
-		PendingAdventureCreate();
-		ClearPendingAdventureData();
-	}
-	else
-	{
-		ClearPendingAdventureData();
-	}
-}
-
-void Client::Handle_OP_LDoNDisarmTraps(const EQApplicationPacket *app)
-{
-	Mob * target = GetTarget();
-	if (target && target->IsNPC() && !target->IsAura())
-	{
-		if (HasSkill(EQ::skills::SkillDisarmTraps))
-		{
-			if (DistanceSquaredNoZ(m_Position, target->GetPosition()) > RuleI(Adventure, LDoNTrapDistanceUse))
-			{
-				Message(Chat::Red, "%s is too far away.", target->GetCleanName());
-				return;
-			}
-			HandleLDoNDisarm(target->CastToNPC(), GetSkill(EQ::skills::SkillDisarmTraps), LDoNTypeMechanical);
-		}
-		else
-			Message(Chat::Red, "You do not have the disarm trap skill.");
-	}
-}
-
-void Client::Handle_OP_LDoNInspect(const EQApplicationPacket *app)
-{
-	Mob * target = GetTarget();
-	if (target && target->GetClass() == LDON_TREASURE && !target->IsAura())
-	{
-		std::vector<std::any> args = { target };
-		if (parse->EventPlayer(EVENT_INSPECT, this, "", target->GetID(), &args) == 0)
-		{
-			Message(Chat::Yellow, "%s", target->GetCleanName());
-		}
-	}
-}
-
-void Client::Handle_OP_LDoNOpen(const EQApplicationPacket *app)
-{
-	Mob * target = GetTarget();
-	if (target && target->IsNPC() && !target->IsAura()) {
-		HandleLDoNOpen(target->CastToNPC());
-	}
-}
-
-void Client::Handle_OP_LDoNPickLock(const EQApplicationPacket *app)
-{
-	Mob * target = GetTarget();
-	if (target && target->IsNPC() && !target->IsAura())
-	{
-		if (HasSkill(EQ::skills::SkillPickLock))
-		{
-			if (DistanceSquaredNoZ(m_Position, target->GetPosition()) > RuleI(Adventure, LDoNTrapDistanceUse))
-			{
-				Message(Chat::Red, "%s is too far away.", target->GetCleanName());
-				return;
-			}
-			HandleLDoNPickLock(target->CastToNPC(), GetSkill(EQ::skills::SkillPickLock), LDoNTypeMechanical);
-		}
-		else
-			Message(Chat::Red, "You do not have the pick locks skill.");
-	}
-}
-
-void Client::Handle_OP_LDoNSenseTraps(const EQApplicationPacket *app)
-{
-	Mob * target = GetTarget();
-	if (target && target->IsNPC() && !target->IsAura())
-	{
-		if (HasSkill(EQ::skills::SkillSenseTraps))
-		{
-			if (DistanceSquaredNoZ(m_Position, target->GetPosition()) > RuleI(Adventure, LDoNTrapDistanceUse))
-			{
-				Message(Chat::Red, "%s is too far away.", target->GetCleanName());
-				return;
-			}
-			HandleLDoNSenseTraps(target->CastToNPC(), GetSkill(EQ::skills::SkillSenseTraps), LDoNTypeMechanical);
-		}
-		else
-			Message(Chat::Red, "You do not have the sense traps skill.");
-	}
 }
 
 void Client::Handle_OP_LeadershipExpToggle(const EQApplicationPacket *app)
@@ -9228,15 +7937,6 @@ void Client::Handle_OP_LeadershipExpToggle(const EQApplicationPacket *app)
 		Save();
 		MessageString(Chat::Yellow, LEADERSHIP_EXP_OFF);
 	}
-}
-
-void Client::Handle_OP_LeaveAdventure(const EQApplicationPacket *app)
-{
-	if (!IsOnAdventure())
-	{
-		return;
-	}
-	LeaveAdventure();
 }
 
 void Client::Handle_OP_LeaveBoat(const EQApplicationPacket *app)
@@ -9322,142 +8022,6 @@ void Client::Handle_OP_LFGGetMatchesRequest(const EQApplicationPacket *app)
 		smrs->Classes = gmrs->Classes;
 		worldserver.SendPacket(pack);
 		safe_delete(pack);
-	}
-}
-
-void Client::Handle_OP_LFGuild(const EQApplicationPacket *app)
-{
-	if (app->size < 4)
-		return;
-
-	uint32 Command = *((uint32 *)app->pBuffer);
-
-	switch (Command)
-	{
-	case 0:
-	{
-		VERIFY_PACKET_LENGTH(OP_LFGuild, app, LFGuild_PlayerToggle_Struct);
-		LFGuild_PlayerToggle_Struct *pts = (LFGuild_PlayerToggle_Struct *)app->pBuffer;
-
-#ifdef DARWIN
-#if __DARWIN_C_LEVEL < 200809L
-		if (strlen(pts->Comment) > 256)
-#else
-		if (strnlen(pts->Comment, 256) > 256)
-#endif // __DARWIN_C_LEVEL
-#else
-		if (strnlen(pts->Comment, 256) > 256)
-#endif // DARWIN
-			return;
-
-		auto pack = new ServerPacket(ServerOP_QueryServGeneric, strlen(GetName()) + strlen(pts->Comment) + 38);
-
-		pack->WriteUInt32(zone->GetZoneID());
-		pack->WriteUInt32(zone->GetInstanceID());
-		pack->WriteString(GetName());
-		pack->WriteUInt32(QSG_LFGuild);
-		pack->WriteUInt32(QSG_LFGuild_UpdatePlayerInfo);
-		pack->WriteUInt32(GetBaseClass());
-		pack->WriteUInt32(GetLevel());
-		pack->WriteUInt32(GetSpentAA());
-		pack->WriteString(pts->Comment);
-		pack->WriteUInt32(pts->Toggle);
-		pack->WriteUInt32(pts->TimeZone);
-
-		worldserver.SendPacket(pack);
-		safe_delete(pack);
-
-		break;
-	}
-	case 1:
-	{
-		VERIFY_PACKET_LENGTH(OP_LFGuild, app, LFGuild_GuildToggle_Struct);
-		LFGuild_GuildToggle_Struct *gts = (LFGuild_GuildToggle_Struct *)app->pBuffer;
-
-#ifdef DARWIN
-#if __DARWIN_C_LEVEL < 200809L
-		if (strlen(gts->Comment) > 256)
-#else
-		if (strnlen(gts->Comment, 256) > 256)
-#endif // __DARWIN_C_LEVEL
-#else
-		if (strnlen(gts->Comment, 256) > 256)
-#endif // __DARWIN
-			return;
-
-		auto pack =
-			new ServerPacket(ServerOP_QueryServGeneric, strlen(GetName()) + strlen(gts->Comment) +
-				strlen(guild_mgr.GetGuildName(GuildID())) + 43);
-
-		pack->WriteUInt32(zone->GetZoneID());
-		pack->WriteUInt32(zone->GetInstanceID());
-		pack->WriteString(GetName());
-		pack->WriteUInt32(QSG_LFGuild);
-		pack->WriteUInt32(QSG_LFGuild_UpdateGuildInfo);
-		pack->WriteString(guild_mgr.GetGuildName(GuildID()));
-		pack->WriteString(gts->Comment);
-		pack->WriteUInt32(gts->FromLevel);
-		pack->WriteUInt32(gts->ToLevel);
-		pack->WriteUInt32(gts->Classes);
-		pack->WriteUInt32(gts->AACount);
-		pack->WriteUInt32(gts->Toggle);
-		pack->WriteUInt32(gts->TimeZone);
-
-		worldserver.SendPacket(pack);
-		safe_delete(pack);
-
-		break;
-	}
-	case 3:
-	{
-		VERIFY_PACKET_LENGTH(OP_LFGuild, app, LFGuild_SearchPlayer_Struct);
-
-		auto pack = new ServerPacket(ServerOP_QueryServGeneric, strlen(GetName()) + 37);
-
-		pack->WriteUInt32(zone->GetZoneID());
-		pack->WriteUInt32(zone->GetInstanceID());
-		pack->WriteString(GetName());
-		pack->WriteUInt32(QSG_LFGuild);
-		pack->WriteUInt32(QSG_LFGuild_PlayerMatches);
-
-		LFGuild_SearchPlayer_Struct *sps = (LFGuild_SearchPlayer_Struct *)app->pBuffer;
-		pack->WriteUInt32(sps->FromLevel);
-		pack->WriteUInt32(sps->ToLevel);
-		pack->WriteUInt32(sps->MinAA);
-		pack->WriteUInt32(sps->TimeZone);
-		pack->WriteUInt32(sps->Classes);
-
-		worldserver.SendPacket(pack);
-		safe_delete(pack);
-
-		break;
-	}
-	case 4:
-	{
-		VERIFY_PACKET_LENGTH(OP_LFGuild, app, LFGuild_SearchGuild_Struct);
-
-		auto pack = new ServerPacket(ServerOP_QueryServGeneric, strlen(GetName()) + 33);
-
-		pack->WriteUInt32(zone->GetZoneID());
-		pack->WriteUInt32(zone->GetInstanceID());
-		pack->WriteString(GetName());
-		pack->WriteUInt32(QSG_LFGuild);
-		pack->WriteUInt32(QSG_LFGuild_GuildMatches);
-
-		LFGuild_SearchGuild_Struct *sgs = (LFGuild_SearchGuild_Struct *)app->pBuffer;
-
-		pack->WriteUInt32(sgs->Level);
-		pack->WriteUInt32(sgs->AAPoints);
-		pack->WriteUInt32(sgs->TimeZone);
-		pack->WriteUInt32(sgs->Class);
-
-		worldserver.SendPacket(pack);
-		safe_delete(pack);
-
-		break;
-	}
-	default:
-		break;
 	}
 }
 
@@ -11827,7 +10391,6 @@ void Client::Handle_OP_RaidCommand(const EQApplicationPacket *app)
 					ServerRaidGeneralAction_Struct* rga = (ServerRaidGeneralAction_Struct*)pack->pBuffer;
 					rga->rid = GetID();
 					rga->zoneid = zone->GetZoneID();
-					rga->instance_id = zone->GetInstanceID();
 					strn0cpy(rga->playername, raid_command_packet->leader_name, 64);
 					worldserver.SendPacket(pack);
 					safe_delete(pack);
@@ -11881,7 +10444,6 @@ void Client::Handle_OP_RaidCommand(const EQApplicationPacket *app)
 
 												raid_command_packet->rid = raid->GetID();
 												raid_command_packet->zoneid = zone->GetZoneID();
-												raid_command_packet->instance_id = zone->GetInstanceID();
 												strn0cpy(raid_command_packet->playername, raid->members[x].membername, 64);
 
 												worldserver.SendPacket(pack);
@@ -11908,7 +10470,6 @@ void Client::Handle_OP_RaidCommand(const EQApplicationPacket *app)
 							ServerRaidGeneralAction_Struct* raid_command = (ServerRaidGeneralAction_Struct*)pack->pBuffer;
 							raid_command->rid = raid->GetID();
 							raid_command->zoneid = zone->GetZoneID();
-							raid_command->instance_id = zone->GetInstanceID();
 							strn0cpy(raid_command->playername, raid_command_packet->leader_name, 64);
 							worldserver.SendPacket(pack);
 							safe_delete(pack);
@@ -11953,7 +10514,6 @@ void Client::Handle_OP_RaidCommand(const EQApplicationPacket *app)
 									raid_command->rid = raid->GetID();
 									strn0cpy(raid_command->playername, raid->members[x].membername, 64);
 									raid_command->zoneid = zone->GetZoneID();
-									raid_command->instance_id = zone->GetInstanceID();
 
 									worldserver.SendPacket(pack);
 									safe_delete(pack);
@@ -11972,7 +10532,6 @@ void Client::Handle_OP_RaidCommand(const EQApplicationPacket *app)
 
 						raid_command->rid = raid->GetID();
 						raid_command->zoneid = zone->GetZoneID();
-						raid_command->instance_id = zone->GetInstanceID();
 						strn0cpy(raid_command->playername, raid_command_packet->leader_name, 64);
 
 						worldserver.SendPacket(pack);
@@ -12604,7 +11163,7 @@ void Client::Handle_OP_Rewind(const EQApplicationPacket *app)
 		MessageString(Chat::System, REWIND_WAIT);
 	}
 	else {
-		CastToClient()->MovePC(zone->GetZoneID(), zone->GetInstanceID(), m_RewindLocation.x, m_RewindLocation.y, m_RewindLocation.z, 0, 2, Rewind);
+		CastToClient()->MovePC(zone->GetZoneID(), m_RewindLocation.x, m_RewindLocation.y, m_RewindLocation.z, 0, 2, Rewind);
 		rewind_timer.Start(30000, true);
 	}
 }
@@ -12619,7 +11178,7 @@ void Client::Handle_OP_RezzAnswer(const EQApplicationPacket *app)
 		PendingRezzXP, ra->action ? "ACCEPT" : "DECLINE");
 
 
-	OPRezzAnswer(ra->action, ra->spellid, ra->zone_id, ra->instance_id, ra->x, ra->y, ra->z);
+	OPRezzAnswer(ra->action, ra->spellid, ra->zone_id, ra->x, ra->y, ra->z);
 
 	if (ra->action == 1)
 	{
@@ -12761,7 +11320,7 @@ void Client::Handle_OP_SenseTraps(const EQApplicationPacket *app)
 				angle = (256 + angle);
 
 			angle *= 2;
-			MovePC(zone->GetZoneID(), zone->GetInstanceID(), GetX(), GetY(), GetZ(), angle);
+			MovePC(zone->GetZoneID(), GetX(), GetY(), GetZ(), angle);
 			return;
 		}
 	}
@@ -14171,20 +12730,6 @@ void Client::Handle_OP_TargetMouse(const EQApplicationPacket *app)
 	Handle_OP_TargetCommand(app);
 }
 
-void Client::Handle_OP_TaskHistoryRequest(const EQApplicationPacket *app)
-{
-
-	if (app->size != sizeof(TaskHistoryRequest_Struct)) {
-		LogDebug("Size mismatch in OP_TaskHistoryRequest expected [{}] got [{}]", sizeof(TaskHistoryRequest_Struct), app->size);
-		DumpPacket(app);
-		return;
-	}
-	TaskHistoryRequest_Struct *ths = (TaskHistoryRequest_Struct*)app->pBuffer;
-
-	if (RuleB(TaskSystem, EnableTaskSystem) && task_state)
-		task_state->SendTaskHistory(this, ths->TaskIndex);
-}
-
 void Client::Handle_OP_Taunt(const EQApplicationPacket *app)
 {
 	if (app->size != sizeof(ClientTarget_Struct)) {
@@ -14876,8 +13421,7 @@ void Client::Handle_OP_Translocate(const EQApplicationPacket *app)
 	if (its->Complete == 1) {
 		uint32 spell_id = PendingTranslocateData.spell_id;
 		bool in_translocate_zone = (
-			zone->GetZoneID() == PendingTranslocateData.zone_id &&
-			zone->GetInstanceID() == PendingTranslocateData.instance_id
+			zone->GetZoneID() == PendingTranslocateData.zone_id
 		);
 
 		if (parse->EventSpell(EVENT_SPELL_EFFECT_TRANSLOCATE_COMPLETE, nullptr, this, spell_id, "", 0) == 0) {
@@ -14898,7 +13442,6 @@ void Client::Handle_OP_Translocate(const EQApplicationPacket *app)
 			////but that could be abusable, so lets go through proper channels
 			MovePC(
 				PendingTranslocateData.zone_id,
-				PendingTranslocateData.instance_id,
 				PendingTranslocateData.x,
 				PendingTranslocateData.y,
 				PendingTranslocateData.z,
@@ -15395,253 +13938,6 @@ void Client::Handle_OP_UnderWorld(const EQApplicationPacket *app)
 	if (m_UnderWorld->spawn_id == GetID() && dist <= 5.0f && zone->newzone_data.underworld_teleport_index != 0) {
 		cheat_manager.SetExemptStatus(Port, true);
 	}
-}
-
-void Client::Handle_OP_SharedTaskRemovePlayer(const EQApplicationPacket *app)
-{
-	if (app->size != sizeof(SharedTaskRemovePlayer_Struct)) {
-		LogPacketClientServer(
-			"Wrong size on Handle_OP_SharedTaskRemovePlayer | got [{}] expected [{}]",
-			app->size,
-			sizeof(SharedTaskRemovePlayer_Struct)
-		);
-		return;
-	}
-	auto *r = (SharedTaskRemovePlayer_Struct *) app->pBuffer;
-
-	LogTasks(
-		"[Handle_OP_SharedTaskRemovePlayer] field1 [{}] field2 [{}] player_name [{}]",
-		r->field1,
-		r->field2,
-		r->player_name
-	);
-
-	// live no-ops this command if not in a shared task
-	if (GetTaskState()->HasActiveSharedTask()) {
-		// struct
-		auto p = new ServerPacket(
-			ServerOP_SharedTaskRemovePlayer,
-			sizeof(ServerSharedTaskRemovePlayer_Struct)
-		);
-
-		auto *rp = (ServerSharedTaskRemovePlayer_Struct *) p->pBuffer;
-
-		// fill
-		rp->source_character_id = CharacterID();
-		rp->task_id             = GetTaskState()->GetActiveSharedTask().task_id;
-		strn0cpy(rp->player_name, r->player_name, sizeof(r->player_name));
-
-		LogTasks(
-			"[Handle_OP_SharedTaskRemovePlayer] source_character_id [{}] task_id [{}] player_name [{}]",
-			rp->source_character_id,
-			rp->task_id,
-			rp->player_name
-		);
-
-		// send
-		worldserver.SendPacket(p);
-		safe_delete(p);
-	}
-}
-
-void Client::Handle_OP_SharedTaskAddPlayer(const EQApplicationPacket *app)
-{
-	if (app->size != sizeof(SharedTaskAddPlayer_Struct)) {
-		LogPacketClientServer(
-			"Wrong size on Handle_OP_SharedTaskAddPlayer | got [{}] expected [{}]",
-			app->size,
-			sizeof(SharedTaskAddPlayer_Struct)
-		);
-		return;
-	}
-	auto *r = (SharedTaskAddPlayer_Struct *) app->pBuffer;
-
-	LogTasks(
-		"[SharedTaskAddPlayer_Struct] field1 [{}] field2 [{}] player_name [{}]",
-		r->field1,
-		r->field2,
-		r->player_name
-	);
-
-	if (!GetTaskState()->HasActiveSharedTask()) {
-		// this message is generated client-side in newer clients
-		Message(Chat::System, TaskStr::Get(TaskStr::COULD_NOT_USE_COMMAND));
-	}
-	else {
-		// struct
-		auto p = new ServerPacket(
-			ServerOP_SharedTaskAddPlayer,
-			sizeof(ServerSharedTaskAddPlayer_Struct)
-		);
-
-		auto *rp = (ServerSharedTaskAddPlayer_Struct *) p->pBuffer;
-
-		// fill
-		rp->source_character_id = CharacterID();
-		rp->task_id             = GetTaskState()->GetActiveSharedTask().task_id;
-		strn0cpy(rp->player_name, r->player_name, sizeof(r->player_name));
-
-		LogTasks(
-			"[Handle_OP_SharedTaskRemovePlayer] source_character_id [{}] task_id [{}] player_name [{}]",
-			rp->source_character_id,
-			rp->task_id,
-			rp->player_name
-		);
-
-		// send
-		worldserver.SendPacket(p);
-		safe_delete(p);
-	}
-}
-
-void Client::Handle_OP_SharedTaskMakeLeader(const EQApplicationPacket *app)
-{
-	if (app->size != sizeof(SharedTaskMakeLeader_Struct)) {
-		LogPacketClientServer(
-			"Wrong size on Handle_OP_SharedTaskMakeLeader | got [{}] expected [{}]",
-			app->size,
-			sizeof(SharedTaskMakeLeader_Struct)
-		);
-		return;
-	}
-
-	auto *r = (SharedTaskMakeLeader_Struct *) app->pBuffer;
-	LogTasks(
-		"[SharedTaskMakeLeader_Struct] field1 [{}] field2 [{}] player_name [{}]",
-		r->field1,
-		r->field2,
-		r->player_name
-	);
-
-	// live no-ops this command if not in a shared task
-	if (GetTaskState()->HasActiveSharedTask()) {
-		// struct
-		auto p = new ServerPacket(
-			ServerOP_SharedTaskMakeLeader,
-			sizeof(ServerSharedTaskMakeLeader_Struct)
-		);
-
-		auto *rp = (ServerSharedTaskMakeLeader_Struct *) p->pBuffer;
-
-		// fill
-		rp->source_character_id = CharacterID();
-		rp->task_id             = GetTaskState()->GetActiveSharedTask().task_id;
-		strn0cpy(rp->player_name, r->player_name, sizeof(r->player_name));
-
-		LogTasks(
-			"[Handle_OP_SharedTaskRemovePlayer] source_character_id [{}] task_id [{}] player_name [{}]",
-			rp->source_character_id,
-			rp->task_id,
-			rp->player_name
-		);
-
-		// send
-		worldserver.SendPacket(p);
-		safe_delete(p);
-	}
-}
-
-void Client::Handle_OP_SharedTaskInviteResponse(const EQApplicationPacket *app)
-{
-	if (app->size != sizeof(SharedTaskInviteResponse_Struct)) {
-		LogPacketClientServer(
-			"Wrong size on SharedTaskInviteResponse | got [{}] expected [{}]",
-			app->size,
-			sizeof(SharedTaskInviteResponse_Struct)
-		);
-		return;
-	}
-
-	auto *r = (SharedTaskInviteResponse_Struct *) app->pBuffer;
-	LogTasks(
-		"[SharedTaskInviteResponse] unknown00 [{}] invite_id [{}] accepted [{}]",
-		r->unknown00,
-		r->invite_id,
-		r->accepted
-	);
-
-	// struct
-	auto p = new ServerPacket(
-		ServerOP_SharedTaskInviteAcceptedPlayer,
-		sizeof(ServerSharedTaskInviteAccepted_Struct)
-	);
-
-	auto *c = (ServerSharedTaskInviteAccepted_Struct *) p->pBuffer;
-
-	// fill
-	c->source_character_id = CharacterID();
-	c->shared_task_id      = r->invite_id;
-	c->accepted            = r->accepted;
-	strn0cpy(c->player_name, GetName(), sizeof(c->player_name));
-
-	LogTasks(
-		"[ServerOP_SharedTaskInviteAcceptedPlayer] source_character_id [{}] shared_task_id [{}]",
-		c->source_character_id,
-		c->shared_task_id
-	);
-
-	// send
-	worldserver.SendPacket(p);
-	safe_delete(p);
-}
-
-void Client::Handle_OP_SharedTaskAccept(const EQApplicationPacket* app)
-{
-	auto buf = reinterpret_cast<SharedTaskAccept_Struct*>(app->pBuffer);
-
-	LogTasksDetail(
-		"[OP_SharedTaskAccept] unknown00 [{}] unknown04 [{}] npc_entity_id [{}] task_id [{}]",
-		buf->unknown00,
-		buf->unknown04,
-		buf->npc_entity_id,
-		buf->task_id
-	);
-
-	if (buf->task_id > 0 && RuleB(TaskSystem, EnableTaskSystem) && task_state)
-	{
-		if (task_state->CanAcceptNewTask(this, buf->task_id, buf->npc_entity_id))
-		{
-			task_state->AcceptNewTask(this, buf->task_id, buf->npc_entity_id, std::time(nullptr));
-		}
-		task_state->ClearLastOffers();
-	}
-}
-
-void Client::Handle_OP_SharedTaskQuit(const EQApplicationPacket* app)
-{
-	if (GetTaskState()->HasActiveSharedTask())
-	{
-		CancelTask(TASKSLOTSHAREDTASK, TaskType::Shared);
-	}
-}
-
-void Client::Handle_OP_TaskTimers(const EQApplicationPacket* app)
-{
-	GetTaskState()->ListTaskTimers(this);
-}
-
-void Client::Handle_OP_SharedTaskPlayerList(const EQApplicationPacket* app)
-{
-	if (GetTaskState()->HasActiveSharedTask())
-	{
-		uint32_t size = sizeof(ServerSharedTaskPlayerList_Struct);
-		auto pack = std::make_unique<ServerPacket>(ServerOP_SharedTaskPlayerList, size);
-		auto buf = reinterpret_cast<ServerSharedTaskPlayerList_Struct*>(pack->pBuffer);
-		buf->source_character_id = CharacterID();
-		buf->task_id = GetTaskState()->GetActiveSharedTask().task_id;
-
-		worldserver.SendPacket(pack.get());
-	}
-}
-
-int64 Client::GetSharedTaskId() const
-{
-	return m_shared_task_id;
-}
-
-void Client::SetSharedTaskId(int64 shared_task_id)
-{
-	Client::m_shared_task_id = shared_task_id;
 }
 
 bool Client::CanTradeFVNoDropItem()

@@ -18,7 +18,6 @@
 
 #include "../common/global_define.h"
 #include "../common/eqemu_logsys.h"
-#include "expedition.h"
 #include "masterentity.h"
 #include "npc_ai.h"
 #include "../common/packet_functions.h"
@@ -583,7 +582,6 @@ void Group::SendGroupJoinOOZ(Mob* NewMember) {
 	ServerGroupJoin_Struct* gj = (ServerGroupJoin_Struct*)pack->pBuffer;
 	gj->gid = GetID();
 	gj->zoneid = zone->GetZoneID();
-	gj->instance_id = zone->GetInstanceID();
 	strcpy(gj->member_name, NewMember->GetCleanName());
 	worldserver.SendPacket(pack);
 	safe_delete(pack);
@@ -693,7 +691,6 @@ bool Group::DelMember(Mob* oldmember, bool ignoresender)
 	ServerGroupLeave_Struct* gl = (ServerGroupLeave_Struct*)pack->pBuffer;
 	gl->gid = GetID();
 	gl->zoneid = zone->GetZoneID();
-	gl->instance_id = zone->GetInstanceID();
 	strcpy(gl->member_name, oldmember->GetCleanName());
 	worldserver.SendPacket(pack);
 	safe_delete(pack);
@@ -872,7 +869,6 @@ void Group::GroupMessage(Mob* sender, uint8 language, uint8 lang_skill, const ch
 	ServerGroupChannelMessage_Struct* gcm = (ServerGroupChannelMessage_Struct*)pack->pBuffer;
 	gcm->zoneid = zone->GetZoneID();
 	gcm->groupid = GetID();
-	gcm->instanceid = zone->GetInstanceID();
 	strcpy(gcm->from, sender->GetCleanName());
 	strcpy(gcm->message, message);
 	worldserver.SendPacket(pack);
@@ -947,7 +943,6 @@ void Group::DisbandGroup(bool joinraid) {
 	ServerDisbandGroup_Struct* dg = (ServerDisbandGroup_Struct*)pack->pBuffer;
 	dg->zoneid = zone->GetZoneID();
 	dg->groupid = GetID();
-	dg->instance_id = zone->GetInstanceID();
 	worldserver.SendPacket(pack);
 	safe_delete(pack);
 
@@ -1113,14 +1108,14 @@ uint32 Group::GetLowestLevel()
 	return level;
 }
 
-void Group::TeleportGroup(Mob* sender, uint32 zoneID, uint16 instance_id, float x, float y, float z, float heading)
+void Group::TeleportGroup(Mob* sender, uint32 zoneID, float x, float y, float z, float heading)
 {
 	uint32 i;
 	for (i = 0; i < MAX_GROUP_MEMBERS; i++)
 	{
 		if (members[i] != nullptr && members[i]->IsClient() && members[i] != sender)
 		{
-			members[i]->CastToClient()->MovePC(zoneID, instance_id, x, y, z, heading, 0, ZoneSolicited);
+			members[i]->CastToClient()->MovePC(zoneID, x, y, z, heading, 0, ZoneSolicited);
 		}
 	}
 }
@@ -2452,25 +2447,4 @@ void Group::QueueClients(Mob *sender, const EQApplicationPacket *app, bool ack_r
 			}
 		}
 	}
-}
-
-bool Group::DoesAnyMemberHaveExpeditionLockout(
-	const std::string& expedition_name, const std::string& event_name, int max_check_count)
-{
-	if (max_check_count <= 0)
-	{
-		max_check_count = MAX_GROUP_MEMBERS;
-	}
-
-	for (int i = 0; i < MAX_GROUP_MEMBERS && i < max_check_count; ++i)
-	{
-		if (membername[i][0])
-		{
-			if (Expedition::HasLockoutByCharacterName(membername[i], expedition_name, event_name))
-			{
-				return true;
-			}
-		}
-	}
-	return false;
 }

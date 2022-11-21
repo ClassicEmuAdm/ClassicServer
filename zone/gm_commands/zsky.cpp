@@ -17,10 +17,9 @@ void command_zsky(Client *c, const Seperator *sep)
 
 	if (permanent) {
 		auto query = fmt::format(
-			"UPDATE zone SET sky = {} WHERE zoneidnumber = {} AND version = {}",
+			"UPDATE zone SET sky = {} WHERE zoneidnumber = {}",
 			sky_type,
-			zone->GetZoneID(),
-			zone->GetInstanceVersion()
+			zone->GetZoneID()
 		);
 		database.QueryDatabase(query);
 	}

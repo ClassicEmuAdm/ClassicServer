@@ -14,10 +14,8 @@ SET(common_sources
     database/database_dump_service.cpp
     database.cpp
     database_conversions.cpp
-    database_instances.cpp
     dbcore.cpp
     deity.cpp
-    dynamic_zone_base.cpp
     emu_constants.cpp
     emu_limits.cpp
     emu_opcodes.cpp
@@ -33,7 +31,6 @@ SET(common_sources
     eq_stream_proxy.cpp
     eqtime.cpp
     event_sub.cpp
-    expedition_lockout_timer.cpp
     extprofile.cpp
     discord_manager.cpp
     faction.cpp
@@ -74,7 +71,6 @@ SET(common_sources
     serialize_buffer.cpp
     server_event_scheduler.cpp
     serverinfo.cpp
-    shared_tasks.cpp
     shareddb.cpp
     skills.cpp
     spdat.cpp
@@ -134,12 +130,6 @@ SET(repositories
     repositories/base/base_account_flags_repository.h
     repositories/base/base_account_ip_repository.h
     repositories/base/base_account_rewards_repository.h
-    repositories/base/base_adventure_details_repository.h
-    repositories/base/base_adventure_members_repository.h
-    repositories/base/base_adventure_stats_repository.h
-    repositories/base/base_adventure_template_repository.h
-    repositories/base/base_adventure_template_entry_repository.h
-    repositories/base/base_adventure_template_entry_flavor_repository.h
     repositories/base/base_alternate_currency_repository.h
     repositories/base/base_auras_repository.h
     repositories/base/base_base_data_repository.h
@@ -160,7 +150,6 @@ SET(repositories
     repositories/base/base_character_currency_repository.h
     repositories/base/base_character_data_repository.h
     repositories/base/base_character_disciplines_repository.h
-    repositories/base/base_character_expedition_lockouts_repository.h
     repositories/base/base_character_exp_modifiers_repository.h
     repositories/base/base_character_inspect_messages_repository.h
     repositories/base/base_character_instance_safereturns_repository.h
@@ -176,15 +165,9 @@ SET(repositories
     repositories/base/base_character_potionbelt_repository.h
     repositories/base/base_character_skills_repository.h
     repositories/base/base_character_spells_repository.h
-    repositories/base/base_character_tasks_repository.h
-    repositories/base/base_character_task_timers_repository.h
     repositories/base/base_char_create_combinations_repository.h
     repositories/base/base_char_create_point_allocations_repository.h
     repositories/base/base_char_recipe_list_repository.h
-    repositories/base/base_completed_shared_tasks_repository.h
-    repositories/base/base_completed_shared_task_activity_state_repository.h
-    repositories/base/base_completed_shared_task_members_repository.h
-    repositories/base/base_completed_tasks_repository.h
     repositories/base/base_content_flags_repository.h
     repositories/base/base_damageshieldtypes_repository.h
     repositories/base/base_data_buckets_repository.h
@@ -192,12 +175,7 @@ SET(repositories
     repositories/base/base_discord_webhooks_repository.h
     repositories/base/base_discovered_items_repository.h
     repositories/base/base_doors_repository.h
-    repositories/base/base_dynamic_zones_repository.h
-    repositories/base/base_dynamic_zone_members_repository.h
-    repositories/base/base_dynamic_zone_templates_repository.h
     repositories/base/base_eventlog_repository.h
-    repositories/base/base_expeditions_repository.h
-    repositories/base/base_expedition_lockouts_repository.h
     repositories/base/base_faction_association_repository.h
     repositories/base/base_faction_base_data_repository.h
     repositories/base/base_faction_list_repository.h
@@ -224,8 +202,6 @@ SET(repositories
     repositories/base/base_ip_exemptions_repository.h
     repositories/base/base_items_repository.h
     repositories/base/base_item_tick_repository.h
-    repositories/base/base_ldon_trap_entries_repository.h
-    repositories/base/base_ldon_trap_templates_repository.h
     repositories/base/base_level_exp_mods_repository.h
     repositories/base/base_lfguild_repository.h
     repositories/base/base_login_accounts_repository.h
@@ -270,10 +246,6 @@ SET(repositories
     repositories/base/base_rule_values_repository.h
     repositories/base/base_saylink_repository.h
     repositories/base/base_server_scheduled_events_repository.h
-    repositories/base/base_shared_tasks_repository.h
-    repositories/base/base_shared_task_activity_state_repository.h
-    repositories/base/base_shared_task_dynamic_zones_repository.h
-    repositories/base/base_shared_task_members_repository.h
     repositories/base/base_skill_caps_repository.h
     repositories/base/base_spawn2_repository.h
     repositories/base/base_spawnentry_repository.h
@@ -286,9 +258,6 @@ SET(repositories
     repositories/base/base_spell_globals_repository.h
     repositories/base/base_starting_items_repository.h
     repositories/base/base_start_zones_repository.h
-    repositories/base/base_tasks_repository.h
-    repositories/base/base_tasksets_repository.h
-    repositories/base/base_task_activities_repository.h
     repositories/base/base_timers_repository.h
     repositories/base/base_titles_repository.h
     repositories/base/base_trader_repository.h
@@ -310,12 +279,6 @@ SET(repositories
     repositories/account_flags_repository.h
     repositories/account_ip_repository.h
     repositories/account_rewards_repository.h
-    repositories/adventure_details_repository.h
-    repositories/adventure_members_repository.h
-    repositories/adventure_stats_repository.h
-    repositories/adventure_template_repository.h
-    repositories/adventure_template_entry_repository.h
-    repositories/adventure_template_entry_flavor_repository.h
     repositories/alternate_currency_repository.h
     repositories/auras_repository.h
     repositories/base_data_repository.h
@@ -336,7 +299,6 @@ SET(repositories
     repositories/character_currency_repository.h
     repositories/character_data_repository.h
     repositories/character_disciplines_repository.h
-    repositories/character_expedition_lockouts_repository.h
     repositories/character_exp_modifiers_repository.h
     repositories/character_inspect_messages_repository.h
     repositories/character_instance_safereturns_repository.h
@@ -352,15 +314,9 @@ SET(repositories
     repositories/character_potionbelt_repository.h
     repositories/character_skills_repository.h
     repositories/character_spells_repository.h
-    repositories/character_tasks_repository.h
-    repositories/character_task_timers_repository.h
     repositories/char_create_combinations_repository.h
     repositories/char_create_point_allocations_repository.h
     repositories/char_recipe_list_repository.h
-    repositories/completed_shared_tasks_repository.h
-    repositories/completed_shared_task_activity_state_repository.h
-    repositories/completed_shared_task_members_repository.h
-    repositories/completed_tasks_repository.h
     repositories/content_flags_repository.h
     repositories/damageshieldtypes_repository.h
     repositories/data_buckets_repository.h
@@ -368,12 +324,7 @@ SET(repositories
     repositories/discord_webhooks_repository.h
     repositories/discovered_items_repository.h
     repositories/doors_repository.h
-    repositories/dynamic_zones_repository.h
-    repositories/dynamic_zone_members_repository.h
-    repositories/dynamic_zone_templates_repository.h
     repositories/eventlog_repository.h
-    repositories/expeditions_repository.h
-    repositories/expedition_lockouts_repository.h
     repositories/faction_association_repository.h
     repositories/faction_base_data_repository.h
     repositories/faction_list_repository.h
@@ -400,8 +351,6 @@ SET(repositories
     repositories/ip_exemptions_repository.h
     repositories/items_repository.h
     repositories/item_tick_repository.h
-    repositories/ldon_trap_entries_repository.h
-    repositories/ldon_trap_templates_repository.h
     repositories/level_exp_mods_repository.h
     repositories/lfguild_repository.h
     repositories/login_accounts_repository.h
@@ -446,10 +395,6 @@ SET(repositories
     repositories/rule_values_repository.h
     repositories/saylink_repository.h
     repositories/server_scheduled_events_repository.h
-    repositories/shared_tasks_repository.h
-    repositories/shared_task_activity_state_repository.h
-    repositories/shared_task_dynamic_zones_repository.h
-    repositories/shared_task_members_repository.h
     repositories/skill_caps_repository.h
     repositories/spawn2_repository.h
     repositories/spawnentry_repository.h
@@ -462,9 +407,6 @@ SET(repositories
     repositories/spell_globals_repository.h
     repositories/starting_items_repository.h
     repositories/start_zones_repository.h
-    repositories/tasks_repository.h
-    repositories/tasksets_repository.h
-    repositories/task_activities_repository.h
     repositories/timers_repository.h
     repositories/titles_repository.h
     repositories/trader_repository.h
@@ -503,7 +445,6 @@ SET(common_headers
     deity.h
     discord/discord.h
     discord_manager.h
-    dynamic_zone_base.h
     emu_constants.h
     emu_limits.h
     emu_opcodes.h
@@ -527,7 +468,6 @@ SET(common_headers
     eqtime.h
     errmsg.h
     event_sub.h
-    expedition_lockout_timer.h
     extprofile.h
     faction.h
     file.h
@@ -584,13 +524,11 @@ SET(common_headers
     server_event_scheduler.h
     serverinfo.h
     servertalk.h
-    shared_tasks.h
     shareddb.h
     skills.h
     spdat.h
     strings.h
     struct_strategy.h
-    tasks.h
     textures.h
     timer.h
     types.h

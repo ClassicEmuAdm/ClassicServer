@@ -52,7 +52,6 @@
 #include "../common/zone_store.h"
 #include "titles.h"
 #include "guild_mgr.h"
-#include "task_manager.h"
 #include "quest_parser_collection.h"
 #include "embparser.h"
 #include "lua_parser.h"
@@ -102,7 +101,6 @@ extern Zone *zone;
 npcDecayTimes_Struct  npcCorpseDecayTimes[100];
 TitleManager          title_manager;
 QueryServ             *QServ        = 0;
-TaskManager           *task_manager = 0;
 NpcScaleManager       *npc_scale_manager;
 QuestParserCollection *parse        = 0;
 EQEmuLogSys           LogSys;
@@ -431,11 +429,6 @@ int main(int argc, char** argv) {
 	npc_scale_manager = new NpcScaleManager;
 	npc_scale_manager->LoadScaleData();
 
-	if (RuleB(TaskSystem, EnableTaskSystem)) {
-		task_manager = new TaskManager;
-		task_manager->LoadTasks();
-	}
-
 	parse = new QuestParserCollection();
 #ifdef LUA_EQEMU
 	parse->RegisterQuestInterface(LuaParser::Instance(), "lua");
@@ -467,7 +460,7 @@ int main(int argc, char** argv) {
 	if (!strlen(zone_name) || !strcmp(zone_name, ".")) {
 		LogInfo("Entering sleep mode");
 	}
-	else if (!Zone::Bootup(ZoneID(zone_name), instance_id, true)) {
+	else if (!Zone::Bootup(ZoneID(zone_name))) {
 		LogError("Zone Bootup failed :: Zone::Bootup");
 		zone = nullptr;
 	}
@@ -613,7 +606,6 @@ int main(int argc, char** argv) {
 	if (zone != 0)
 		Zone::Shutdown(true);
 	//Fix for Linux world server problem.
-	safe_delete(task_manager);
 	safe_delete(npc_scale_manager);
 	command_deinit();
 #ifdef BOTS
@@ -652,7 +644,7 @@ void UpdateWindowTitle(char* iNewTitle) {
 #if defined(GOTFRAGS) || defined(_EQDEBUG)
 			snprintf(tmp, sizeof(tmp), "%i: %s, %i clients, %i", ZoneConfig::get()->ZonePort, zone->GetShortName(), numclients, getpid());
 #else
-			snprintf(tmp, sizeof(tmp), "%s :: clients: %i inst_id: %i inst_ver: %i :: port: %i", zone->GetShortName(), numclients, zone->GetInstanceID(), zone->GetInstanceVersion(), ZoneConfig::get()->ZonePort);
+			snprintf(tmp, sizeof(tmp), "%s :: clients: %i :: port: %i", zone->GetShortName(), numclients, ZoneConfig::get()->ZonePort);
 #endif
 		}
 		else {

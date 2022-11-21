@@ -38,7 +38,6 @@ Child of the Mob class.
 
 #include "corpse.h"
 #include "entity.h"
-#include "expedition.h"
 #include "groups.h"
 #include "mob.h"
 #include "raids.h"
@@ -629,11 +628,11 @@ bool Corpse::Save() {
 
 	/* Create New Corpse*/
 	if (corpse_db_id == 0) {
-		corpse_db_id = database.SaveCharacterCorpse(char_id, corpse_name, zone->GetZoneID(), zone->GetInstanceID(), dbpc, m_Position, consented_guild_id);
+		corpse_db_id = database.SaveCharacterCorpse(char_id, corpse_name, zone->GetZoneID(), dbpc, m_Position, consented_guild_id);
 	}
 	/* Update Corpse Data */
 	else{
-		corpse_db_id = database.UpdateCharacterCorpse(corpse_db_id, char_id, corpse_name, zone->GetZoneID(), zone->GetInstanceID(), dbpc, m_Position, consented_guild_id, IsRezzed());
+		corpse_db_id = database.UpdateCharacterCorpse(corpse_db_id, char_id, corpse_name, zone->GetZoneID(), dbpc, m_Position, consented_guild_id, IsRezzed());
 	}
 
 	safe_delete_array(dbpc);
@@ -1355,18 +1354,6 @@ void Corpse::LootItem(Client *client, const EQApplicationPacket *app)
 			prevent_loot = true;
 		}
 
-		if (!IsPlayerCorpse())
-		{
-			// dynamic zones may prevent looting by non-members or based on lockouts
-			auto dz = zone->GetDynamicZone();
-			if (dz && !dz->CanClientLootCorpse(client, GetNPCTypeID(), GetID()))
-			{
-				prevent_loot = true;
-				// note on live this message is only sent once on the first loot attempt of an open corpse
-				client->MessageString(Chat::Loot, LOOT_NOT_ALLOWED, inst->GetItem()->Name);
-			}
-		}
-
 		// do we want this to have a fail option too? Sure?
 		if (parse->EventItem(EVENT_LOOT, client, inst, this, export_string, 0) != 0) {
 			prevent_loot = true;
@@ -1388,15 +1375,6 @@ void Corpse::LootItem(Client *client, const EQApplicationPacket *app)
 				client->DiscoverItem(inst->GetItem()->ID);
 		}
 
-		if (zone->adv_data) {
-			ServerZoneAdventureDataReply_Struct *ad = (ServerZoneAdventureDataReply_Struct *)zone->adv_data;
-			if (ad->type == Adventure_Collect && !IsPlayerCorpse()) {
-				if (ad->data_id == inst->GetItem()->ID) {
-					zone->DoAdventureCountIncrease();
-				}
-			}
-		}
-
 		// get count for task update before it's mutated by AutoPutLootInInventory
 		int count = inst->IsStackable() ? inst->GetCharges() : 1;
 
@@ -1407,11 +1385,6 @@ void Corpse::LootItem(Client *client, const EQApplicationPacket *app)
 		}
 		else {
 			client->PutLootInInventory(EQ::invslot::slotCursor, *inst, bag_item_data);
-		}
-
-		/* Update any tasks that have an activity to loot this item */
-		if (RuleB(TaskSystem, EnableTaskSystem) && IsNPCCorpse()) {
-			client->UpdateTasksOnLoot(this, item->ID, count);
 		}
 
 		/* Remove it from Corpse */
@@ -1837,8 +1810,7 @@ bool Corpse::MovePlayerCorpseToGraveyard()
 	{
 		Save();
 
-		uint16_t instance_id = (zone->GetZoneID() == zone->graveyard_zoneid()) ? zone->GetInstanceID() : 0;
-		database.SendCharacterCorpseToGraveyard(corpse_db_id, zone->graveyard_zoneid(), instance_id, zone->GetGraveyardPoint());
+		database.SendCharacterCorpseToGraveyard(corpse_db_id, zone->graveyard_zoneid(), zone->GetGraveyardPoint());
 		SendWorldSpawnPlayerCorpseInZone(zone->graveyard_zoneid());
 
 		corpse_db_id = 0;
@@ -1846,26 +1818,6 @@ bool Corpse::MovePlayerCorpseToGraveyard()
 		corpse_graveyard_timer.Disable();
 
 		LogDebug("Moved [{}] player corpse to the designated graveyard in zone [{}]", GetName(), ZoneName(zone->graveyard_zoneid()));
-		return true;
-	}
-
-	return false;
-}
-
-bool Corpse::MovePlayerCorpseToNonInstance()
-{
-	if (IsPlayerCorpse() && zone && zone->GetInstanceID() != 0)
-	{
-		Save();
-
-		database.SendCharacterCorpseToNonInstance(corpse_db_id);
-		SendWorldSpawnPlayerCorpseInZone(zone->GetZoneID());
-
-		corpse_db_id = 0;
-		player_corpse_depop = true;
-		corpse_graveyard_timer.Disable();
-
-		LogDebug("Moved [{}] player corpse to non-instance version of zone [{}]", GetName(), ZoneName(zone->GetZoneID()));
 		return true;
 	}
 

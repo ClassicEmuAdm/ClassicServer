@@ -36,12 +36,10 @@ void command_editmassrespawn(Client *c, const Seperator *sep)
 			INNER JOIN spawnentry ON spawn2.spawngroupID = spawnentry.spawngroupID
 			INNER JOIN npc_types ON spawnentry.npcID = npc_types.id
 			WHERE spawn2.zone LIKE '{}'
-			AND spawn2.version = '{}'
 			AND npc_types.name LIKE '{}{}{}'
 			ORDER BY npc_types.id, spawn2.spawngroupID, spawn2.id
 		),
 		zone->GetShortName(),
-		zone->GetInstanceVersion(),
 		search_encapsulator,
 		search_npc_type,
 		search_encapsulator
@@ -92,13 +90,11 @@ void command_editmassrespawn(Client *c, const Seperator *sep)
 							INNER JOIN spawnentry ON spawn2.spawngroupID = spawnentry.spawngroupID
 							INNER JOIN npc_types ON spawnentry.npcID = npc_types.id
 							WHERE spawn2.zone LIKE '{}'
-							AND spawn2.version = '{}'
 							AND npc_types.name LIKE '{}{}{}'
 						)
 						),
 						change_respawn_seconds,
 						zone->GetShortName(),
-						zone->GetInstanceVersion(),
 						search_encapsulator,
 						search_npc_type,
 						search_encapsulator

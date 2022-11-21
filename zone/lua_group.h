@@ -43,7 +43,7 @@ public:
 	uint32 GetAverageLevel();
 	uint32 GetHighestLevel();
 	uint32 GetLowestLevel();
-	void TeleportGroup(Lua_Mob sender, uint32 zone_id, uint32 instance_id, float x, float y, float z, float h);
+	void TeleportGroup(Lua_Mob sender, uint32 zone_id, float x, float y, float z, float h);
 	int GetID();
 	Lua_Mob GetMember(int member_index);
 	bool DoesAnyMemberHaveExpeditionLockout(std::string expedition_name, std::string event_name);

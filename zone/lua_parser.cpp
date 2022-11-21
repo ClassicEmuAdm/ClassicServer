@@ -19,7 +19,6 @@
 #include "lua_parser.h"
 #include "lua_bit.h"
 #include "lua_entity.h"
-#include "lua_expedition.h"
 #include "lua_item.h"
 #include "lua_iteminst.h"
 #include "lua_mob.h"
@@ -1000,8 +999,7 @@ void LuaParser::ReloadQuests() {
 		std::string zone_script = fmt::format(
 			"{}/{}/script_init_v{}.lua",
 			path.GetQuestsPath(),
-			zone->GetShortName(),
-			zone->GetInstanceVersion()
+			zone->GetShortName()
 		);
 
 		f = fopen(zone_script.c_str(), "r");
@@ -1206,9 +1204,7 @@ void LuaParser::MapFunctions(lua_State *L) {
 			lua_register_ruler(),
 			lua_register_ruleb(),
 			lua_register_journal_speakmode(),
-			lua_register_journal_mode(),
-			lua_register_expedition(),
-			lua_register_expedition_lock_messages()
+			lua_register_journal_mode()
 		];
 
 	} catch(std::exception &ex) {

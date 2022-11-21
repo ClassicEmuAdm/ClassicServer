@@ -50,7 +50,6 @@ void command_summon(Client *c, const Seperator *sep)
 			szp->x_pos = c->GetX();
 			szp->y_pos = c->GetY();
 			szp->z_pos = c->GetZ();
-			szp->instance_id = zone->GetInstanceID();
 			worldserver.SendPacket(pack);
 			safe_delete(pack);
 			return;
@@ -80,7 +79,6 @@ void command_summon(Client *c, const Seperator *sep)
 	if (target->IsClient()) {
 		target->CastToClient()->MovePC(
 			zone->GetZoneID(),
-			zone->GetInstanceID(),
 			c->GetX(),
 			c->GetY(),
 			c->GetZ(),

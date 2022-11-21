@@ -329,7 +329,7 @@ void Client::CalculateStandardAAExp(uint32 &add_aaxp, uint8 conlevel, bool resex
 	}
 
 	if (RuleB(Character, EnableCharacterEXPMods)) {
-		add_aaxp *= GetAAEXPModifier(zone->GetZoneID(), zone->GetInstanceVersion());
+		add_aaxp *= GetAAEXPModifier(zone->GetZoneID());
 	}
 
 	add_aaxp = (uint32)(RuleR(Character, AAExpMultiplier) * add_aaxp * aatotalmod);
@@ -492,7 +492,7 @@ void Client::CalculateExp(uint32 in_add_exp, uint32 &add_exp, uint32 &add_aaxp, 
 	}
 
 	if (RuleB(Character, EnableCharacterEXPMods)) {
-		add_exp *= GetEXPModifier(zone->GetZoneID(), zone->GetInstanceVersion());
+		add_exp *= GetEXPModifier(zone->GetZoneID());
 	}
 
 	add_exp = GetEXP() + add_exp;
@@ -862,14 +862,14 @@ void Client::SetLevel(uint8 set_level, bool command)
 		parse->EventPlayer(EVENT_LEVEL_UP, this, "", 0);
 		/* QS: PlayerLogLevels */
 		if (RuleB(QueryServ, PlayerLogLevels)){
-			std::string event_desc = StringFormat("Leveled UP :: to Level:%i from Level:%i in zoneid:%i instid:%i", set_level, m_pp.level, GetZoneID(), GetInstanceID());
+			std::string event_desc = StringFormat("Leveled UP :: to Level:%i from Level:%i in zoneid:%i", set_level, m_pp.level, GetZoneID());
 			QServ->PlayerLogEvent(Player_Log_Levels, CharacterID(), event_desc);
 		}
 	}
 	else if (set_level < m_pp.level){
 		/* QS: PlayerLogLevels */
 		if (RuleB(QueryServ, PlayerLogLevels)){
-			std::string event_desc = StringFormat("Leveled DOWN :: to Level:%i from Level:%i in zoneid:%i instid:%i", set_level, m_pp.level, GetZoneID(), GetInstanceID());
+			std::string event_desc = StringFormat("Leveled DOWN :: to Level:%i from Level:%i in zoneid:%i", set_level, m_pp.level, GetZoneID());
 			QServ->PlayerLogEvent(Player_Log_Levels, CharacterID(), event_desc);
 		}
 	}

@@ -43,7 +43,6 @@ void callGetZoneList(Json::Value &response)
 		row["client_port"]          = zone->GetCPort();
 		row["compile_time"]         = zone->GetCompileTime();
 		row["id"]                   = zone->GetID();
-		row["instance_id"]          = zone->GetInstanceID();
 		row["ip"]                   = zone->GetIP();
 		row["is_static_zone"]       = zone->IsStaticZone();
 		row["launch_name"]          = zone->GetLaunchName();

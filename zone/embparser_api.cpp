@@ -30,7 +30,6 @@
 #include "embperl.h"
 #include "embxs.h"
 #include "entity.h"
-#include "expedition.h"
 #include "queryserv.h"
 #include "questmgr.h"
 #include "zone.h"
@@ -810,21 +809,6 @@ void Perl__resume()
 	quest_manager.resume();
 }
 
-void Perl__addldonpoints(uint32 theme_id, int points)
-{
-	quest_manager.addldonpoints(theme_id, points);
-}
-
-void Perl__addldonwin(uint32 theme_id)
-{
-	quest_manager.addldonwin(theme_id);
-}
-
-void Perl__addldonloss(uint32 theme_id)
-{
-	quest_manager.addldonloss(theme_id);
-}
-
 void Perl__setnexthpevent(int at_mob_percentage)
 {
 	quest_manager.setnexthpevent(at_mob_percentage);
@@ -893,22 +877,12 @@ void Perl__showgrid(int grid_id)
 
 void Perl__spawn_condition(const char* zone_short, uint16 condition_id, int16 value)
 {
-	quest_manager.spawn_condition(zone_short, zone->GetInstanceID(), condition_id, value);
-}
-
-void Perl__spawn_condition(const char* zone_short, uint32_t instance_id, uint16 condition_id, int16 value)
-{
-	quest_manager.spawn_condition(zone_short, instance_id, condition_id, value);
+	quest_manager.spawn_condition(zone_short, condition_id, value);
 }
 
 int Perl__get_spawn_condition(const char* zone_short, uint16 condition_id)
 {
-	return quest_manager.get_spawn_condition(zone_short, zone->GetInstanceID(), condition_id);
-}
-
-int Perl__get_spawn_condition(const char* zone_short, uint32 instance_id, uint16 condition_id)
-{
-	return quest_manager.get_spawn_condition(zone_short, instance_id, condition_id);
+	return quest_manager.get_spawn_condition(zone_short, condition_id);
 }
 
 void Perl__toggle_spawn_event(int event_id, bool is_enabled, bool is_strict, bool reset_base)
@@ -1092,197 +1066,6 @@ bool Perl__createBot(const char* firstname, const char* lastname, int level, int
 
 #endif //BOTS
 
-void Perl__taskselector(perl::array task_ids)
-{
-	if (task_ids.size() > MAXCHOOSERENTRIES)
-	{
-		throw std::runtime_error(fmt::format("Exceeded max number of task offers [{}]", MAXCHOOSERENTRIES));
-	}
-
-	std::vector<int> tasks;
-	for (int i = 0; i < task_ids.size(); ++i)
-	{
-		tasks.push_back(task_ids[i]);
-	}
-	quest_manager.taskselector(tasks);
-}
-
-void Perl__taskselector_nocooldown(perl::array task_ids)
-{
-	std::vector<int> tasks;
-	for (int i = 0; i < task_ids.size() && i < MAXCHOOSERENTRIES; ++i)
-	{
-		tasks.push_back(task_ids[i]);
-	}
-	quest_manager.taskselector(tasks, true);
-}
-
-void Perl__task_setselector(int task_set_id)
-{
-	quest_manager.tasksetselector(task_set_id);
-}
-
-void Perl__task_setselector(int task_set_id, bool ignore_cooldown)
-{
-	quest_manager.tasksetselector(task_set_id, ignore_cooldown);
-}
-
-void Perl__enabletask(perl::array task_ids)
-{
-	int count = 0;
-	int tasks[MAXCHOOSERENTRIES];
-	for (int i = 0; i < task_ids.size() && i < MAXCHOOSERENTRIES; ++i)
-	{
-		tasks[i] = task_ids[i];
-		++count;
-	}
-
-	quest_manager.enabletask(count, tasks);
-}
-
-void Perl__disabletask(perl::array task_ids)
-{
-	int count = 0;
-	int tasks[MAXCHOOSERENTRIES];
-	for (int i = 0; i < task_ids.size() && i < MAXCHOOSERENTRIES; ++i)
-	{
-		tasks[i] = task_ids[i];
-		++count;
-	}
-
-	quest_manager.disabletask(count, tasks);
-}
-
-bool Perl__istaskenabled(int task_id)
-{
-	return quest_manager.istaskenabled(task_id);
-}
-
-bool Perl__istaskactive(int task_id)
-{
-	return quest_manager.istaskactive(task_id);
-}
-
-bool Perl__istaskactivityactive(int task_id, int activity_id)
-{
-	return quest_manager.istaskactivityactive(task_id, activity_id);
-}
-
-int Perl__gettaskactivitydonecount(int task_id, int activity_id)
-{
-	return quest_manager.gettaskactivitydonecount(task_id, activity_id);
-}
-
-void Perl__updatetaskactivity(int task_id, int activity_id)
-{
-	quest_manager.updatetaskactivity(task_id, activity_id, 1);
-}
-
-void Perl__updatetaskactivity(int task_id, int activity_id, int count)
-{
-	quest_manager.updatetaskactivity(task_id, activity_id, count);
-}
-
-void Perl__updatetaskactivity(int task_id, int activity_id, int count, bool ignore_quest_update)
-{
-	quest_manager.updatetaskactivity(task_id, activity_id, count, ignore_quest_update);
-}
-
-void Perl__resettaskactivity(int task_id, int activity_id)
-{
-	quest_manager.resettaskactivity(task_id, activity_id);
-}
-
-void Perl__assigntask(int task_id)
-{
-	quest_manager.assigntask(task_id);
-}
-
-void Perl__assigntask(int task_id, bool enforce_level_requirement)
-{
-	quest_manager.assigntask(task_id, enforce_level_requirement);
-}
-
-void Perl__failtask(int task_id)
-{
-	quest_manager.failtask(task_id);
-}
-
-int Perl__tasktimeleft(int task_id)
-{
-	return quest_manager.tasktimeleft(task_id);
-}
-
-int Perl__istaskcompleted(int task_id)
-{
-	return quest_manager.istaskcompleted(task_id);
-}
-
-int Perl__enabledtaskcount(int task_set)
-{
-	return quest_manager.enabledtaskcount(task_set);
-}
-
-int Perl__firsttaskinset(int task_set)
-{
-	return quest_manager.firsttaskinset(task_set);
-}
-
-int Perl__lasttaskinset(int task_set)
-{
-	return quest_manager.lasttaskinset(task_set);
-}
-
-int Perl__nexttaskinset(int task_set, int task_id)
-{
-	return quest_manager.nexttaskinset(task_set, task_id);
-}
-
-int Perl__activespeaktask()
-{
-	return quest_manager.activespeaktask();
-}
-
-int Perl__activespeakactivity(int task_id)
-{
-	return quest_manager.activespeakactivity(task_id);
-}
-
-int Perl__activetasksinset(int task_set)
-{
-	return quest_manager.activetasksinset(task_set);
-}
-
-int Perl__completedtasksinset(int task_set)
-{
-	return quest_manager.completedtasksinset(task_set);
-}
-
-bool Perl__istaskappropriate(int task_id)
-{
-	return quest_manager.istaskappropriate(task_id);
-}
-
-std::string Perl__gettaskname(uint32 task_id)
-{
-	return quest_manager.gettaskname(task_id);
-}
-
-int Perl__get_dz_task_id()
-{
-	return quest_manager.GetCurrentDzTaskID();
-}
-
-void Perl__end_dz_task()
-{
-	quest_manager.EndCurrentDzTask();
-}
-
-void Perl__end_dz_task(bool send_fail)
-{
-	quest_manager.EndCurrentDzTask(send_fail);
-}
-
 void Perl__popup(const char* window_title, const char* message)
 {
 	quest_manager.popup(window_title, message, 0, 0, 0);
@@ -1432,128 +1215,6 @@ std::string Perl__varlink(int item_id)
 {
 	char text[250] = { 0 };
 	return quest_manager.varlink(text, item_id);
-}
-
-int Perl__CreateInstance(const char* zone_name, int16 version, int32 duration)
-{
-	return quest_manager.CreateInstance(zone_name, version, duration);
-}
-
-void Perl__DestroyInstance(uint16 id)
-{
-	quest_manager.DestroyInstance(id);
-}
-
-void Perl__UpdateInstanceTimer(int16 instance_id, uint32 duration)
-{
-	quest_manager.UpdateInstanceTimer(instance_id, duration);
-}
-
-uint32_t Perl__GetInstanceTimer()
-{
-	return quest_manager.GetInstanceTimer();
-}
-
-uint32_t Perl__GetInstanceTimerByID(uint16 instance_id)
-{
-	return quest_manager.GetInstanceTimerByID(instance_id);
-}
-
-int Perl__GetInstanceID(const char* zone_name, uint16 version)
-{
-	return quest_manager.GetInstanceID(zone_name, version);
-}
-
-int Perl__GetInstanceIDByCharID(const char* zone_name, int16 version, uint32 char_id)
-{
-	return quest_manager.GetInstanceIDByCharID(zone_name, version, char_id);
-}
-
-std::string Perl__GetCharactersInInstance(uint16 instance_id)
-{
-	std::list<uint32> char_id_list;
-	std::string char_id_string = "No players in that instance.";
-
-	database.GetCharactersInInstance(instance_id, char_id_list);
-
-	if (char_id_list.size() > 0)
-	{
-		char_id_string = fmt::format("{} player(s) in instance: ", char_id_list.size());
-		auto iter = char_id_list.begin();
-		while (iter != char_id_list.end()) {
-			char char_name[64];
-			database.GetCharName(*iter, char_name);
-			char_id_string += char_name;
-			char_id_string += "(";
-			char_id_string += itoa(*iter);
-			char_id_string += ")";
-			++iter;
-			if (iter != char_id_list.end())
-				char_id_string += ", ";
-		}
-	}
-
-	return char_id_string;
-}
-
-void Perl__AssignToInstance(uint16 instance_id)
-{
-	quest_manager.AssignToInstance(instance_id);
-}
-
-void Perl__AssignToInstanceByCharID(uint16 instance_id, uint32 char_id)
-{
-	quest_manager.AssignToInstanceByCharID(instance_id, char_id);
-}
-
-void Perl__AssignGroupToInstance(uint16 instance_id)
-{
-	quest_manager.AssignGroupToInstance(instance_id);
-}
-
-void Perl__AssignRaidToInstance(uint16 instance_id)
-{
-	quest_manager.AssignRaidToInstance(instance_id);
-}
-
-void Perl__RemoveFromInstance(uint16 instance_id)
-{
-	quest_manager.RemoveFromInstance(instance_id);
-}
-
-void Perl__RemoveFromInstanceByCharID(uint16 instance_id, uint32 char_id)
-{
-	quest_manager.RemoveFromInstanceByCharID(instance_id, char_id);
-}
-
-bool Perl__CheckInstanceByCharID(uint16 instance_id, uint32 char_id)
-{
-	return quest_manager.CheckInstanceByCharID(instance_id, char_id);
-}
-
-void Perl__RemoveAllFromInstance(uint16 instance_id)
-{
-	quest_manager.RemoveAllFromInstance(instance_id);
-}
-
-void Perl__MovePCInstance(int zone_id, int instance_id, float x, float y, float z)
-{
-	quest_manager.MovePCInstance(zone_id, instance_id, glm::vec4(x, y, z, 0.0f));
-}
-
-void Perl__MovePCInstance(int zone_id, int instance_id, float x, float y, float z, float heading)
-{
-	quest_manager.MovePCInstance(zone_id, instance_id, glm::vec4(x, y, z, heading));
-}
-
-void Perl__FlagInstanceByGroupLeader(uint32 zone, uint16 version)
-{
-	quest_manager.FlagInstanceByGroupLeader(zone, version);
-}
-
-void Perl__FlagInstanceByRaidLeader(uint32 zone, uint16 version)
-{
-	quest_manager.FlagInstanceByRaidLeader(zone, version);
 }
 
 std::string Perl__saylink(const char* text)
@@ -2110,135 +1771,6 @@ void Perl__SetContentFlag(std::string flag_name, bool enabled)
 	content_service.SetContentFlag(flag_name, enabled);
 }
 
-Expedition* Perl__get_expedition()
-{
-	if (zone && zone->GetInstanceID() != 0)
-	{
-		return Expedition::FindCachedExpeditionByZoneInstance(zone->GetZoneID(), zone->GetInstanceID());
-	}
-
-	return nullptr;
-}
-
-Expedition* Perl__get_expedition_by_char_id(uint32 char_id)
-{
-	return Expedition::FindCachedExpeditionByCharacterID(char_id);
-}
-
-Expedition* Perl__get_expedition_by_dz_id(uint32 dz_id)
-{
-	return Expedition::FindCachedExpeditionByDynamicZoneID(dz_id);
-}
-
-Expedition* Perl__get_expedition_by_zone_instance(uint32 zone_id, uint32 instance_id)
-{
-	return Expedition::FindCachedExpeditionByZoneInstance(zone_id, instance_id);
-}
-
-perl::reference Perl__get_expedition_lockout_by_char_id(uint32 char_id, std::string expedition_name, std::string event_name)
-{
-	perl::hash table;
-
-	auto lockouts = Expedition::GetExpeditionLockoutsByCharacterID(char_id);
-
-	auto it = std::find_if(lockouts.begin(), lockouts.end(), [&](const ExpeditionLockoutTimer& lockout) {
-		return lockout.IsSameLockout(expedition_name, event_name);
-	});
-
-	if (it != lockouts.end())
-	{
-		table["remaining"] = it->GetSecondsRemaining();
-		table["uuid"] = it->GetExpeditionUUID();
-	}
-
-	return perl::reference(table);
-}
-
-perl::reference Perl__get_expedition_lockouts_by_char_id(uint32 char_id)
-{
-	perl::hash table;
-
-	auto lockouts = Expedition::GetExpeditionLockoutsByCharacterID(char_id);
-	for (const auto& lockout : lockouts)
-	{
-		if (!table.exists(lockout.GetExpeditionName()))
-		{
-			table[lockout.GetExpeditionName()] = perl::reference(perl::hash());
-		}
-
-		perl::hash expedition_table = table[lockout.GetExpeditionName()];
-		if (!expedition_table.exists(lockout.GetEventName()))
-		{
-			expedition_table[lockout.GetEventName()] = perl::reference(perl::hash());
-		}
-
-		perl::hash event_table = expedition_table[lockout.GetEventName()];
-		event_table["remaining"] = lockout.GetSecondsRemaining();
-		event_table["uuid"] = lockout.GetExpeditionUUID();
-	}
-
-	return perl::reference(table);
-}
-
-perl::reference Perl__get_expedition_lockouts_by_char_id(uint32 char_id, std::string expedition_name)
-{
-	perl::hash table;
-
-	auto lockouts = Expedition::GetExpeditionLockoutsByCharacterID(char_id);
-	for (const auto& lockout : lockouts)
-	{
-		if (lockout.GetExpeditionName() == expedition_name)
-		{
-			if (!table.exists(lockout.GetEventName()))
-			{
-				table[lockout.GetEventName()] = perl::reference(perl::hash());
-			}
-			perl::hash event_table = table[lockout.GetEventName()];
-			event_table["remaining"] = lockout.GetSecondsRemaining();
-			event_table["uuid"] = lockout.GetExpeditionUUID();
-		}
-	}
-
-	return perl::reference(table);
-}
-
-void Perl__add_expedition_lockout_all_clients(std::string expedition_name, std::string event_name, uint32 seconds)
-{
-	auto lockout = ExpeditionLockoutTimer::CreateLockout(expedition_name, event_name, seconds);
-	Expedition::AddLockoutClients(lockout);
-}
-
-void Perl__add_expedition_lockout_all_clients(std::string expedition_name, std::string event_name, uint32 seconds, std::string uuid)
-{
-	auto lockout = ExpeditionLockoutTimer::CreateLockout(expedition_name, event_name, seconds, uuid);
-	Expedition::AddLockoutClients(lockout);
-}
-
-void Perl__add_expedition_lockout_by_char_id(uint32 char_id, std::string expedition_name, std::string event_name, uint32 seconds)
-{
-	Expedition::AddLockoutByCharacterID(char_id, expedition_name, event_name, seconds);
-}
-
-void Perl__add_expedition_lockout_by_char_id(uint32 char_id, std::string expedition_name, std::string event_name, uint32 seconds, std::string uuid)
-{
-	Expedition::AddLockoutByCharacterID(char_id, expedition_name, event_name, seconds, uuid);
-}
-
-void Perl__remove_expedition_lockout_by_char_id(uint32 char_id, std::string expedition_name, std::string event_name)
-{
-	Expedition::RemoveLockoutsByCharacterID(char_id, expedition_name, event_name);
-}
-
-void Perl__remove_all_expedition_lockouts_by_char_id(uint32 char_id)
-{
-	Expedition::RemoveLockoutsByCharacterID(char_id);
-}
-
-void Perl__remove_all_expedition_lockouts_by_char_id(uint32 char_id, std::string expedition_name)
-{
-	Expedition::RemoveLockoutsByCharacterID(char_id, expedition_name);
-}
-
 EQ::ItemInstance* Perl__createitem(uint32 item_id)
 {
 	return database.CreateItem(item_id);
@@ -2299,19 +1831,9 @@ double Perl__getaaexpmodifierbycharid(uint32 character_id, uint32 zone_id)
 	return quest_manager.GetAAEXPModifierByCharID(character_id, zone_id);
 }
 
-double Perl__getaaexpmodifierbycharid(uint32 character_id, uint32 zone_id, int16 instance_version)
-{
-	return quest_manager.GetAAEXPModifierByCharID(character_id, zone_id, instance_version);
-}
-
 double Perl__getexpmodifierbycharid(uint32 character_id, uint32 zone_id)
 {
 	return quest_manager.GetEXPModifierByCharID(character_id, zone_id);
-}
-
-double Perl__getexpmodifierbycharid(uint32 character_id, uint32 zone_id, int16 instance_version)
-{
-	return quest_manager.GetEXPModifierByCharID(character_id, zone_id, instance_version);
 }
 
 void Perl__setaaexpmodifierbycharid(uint32 character_id, uint32 zone_id, double aa_modifier)
@@ -2319,19 +1841,9 @@ void Perl__setaaexpmodifierbycharid(uint32 character_id, uint32 zone_id, double 
 	quest_manager.SetAAEXPModifierByCharID(character_id, zone_id, aa_modifier);
 }
 
-void Perl__setaaexpmodifierbycharid(uint32 character_id, uint32 zone_id, double aa_modifier, int16 instance_version)
-{
-	quest_manager.SetAAEXPModifierByCharID(character_id, zone_id, aa_modifier, instance_version);
-}
-
 void Perl__setexpmodifierbycharid(uint32 character_id, uint32 zone_id, double exp_modifier)
 {
 	quest_manager.SetEXPModifierByCharID(character_id, zone_id, exp_modifier);
-}
-
-void Perl__setexpmodifierbycharid(uint32 character_id, uint32 zone_id, double exp_modifier, int16 instance_version)
-{
-	quest_manager.SetEXPModifierByCharID(character_id, zone_id, exp_modifier, instance_version);
 }
 
 std::string Perl__getcleannpcnamebyid(uint32 npc_id)
@@ -2379,193 +1891,6 @@ int Perl__getspellstat(uint32 spell_id, std::string stat_identifier, uint8 slot)
 	return quest_manager.getspellstat(spell_id, stat_identifier, slot);
 }
 
-void Perl__crosszoneaddldonlossbycharid(int character_id, uint32 theme_id)
-{
-	quest_manager.CrossZoneLDoNUpdate(CZUpdateType_Character, CZLDoNUpdateSubtype_AddLoss, character_id, theme_id);
-}
-
-void Perl__crosszoneaddldonlossbygroupid(int group_id, uint32 theme_id)
-{
-	quest_manager.CrossZoneLDoNUpdate(CZUpdateType_Group, CZLDoNUpdateSubtype_AddLoss, group_id, theme_id);
-}
-
-void Perl__crosszoneaddldonlossbyraidid(int raid_id, uint32 theme_id)
-{
-	quest_manager.CrossZoneLDoNUpdate(CZUpdateType_Raid, CZLDoNUpdateSubtype_AddLoss, raid_id, theme_id);
-}
-
-void Perl__crosszoneaddldonlossbyguildid(int guild_id, uint32 theme_id)
-{
-	quest_manager.CrossZoneLDoNUpdate(CZUpdateType_Guild, CZLDoNUpdateSubtype_AddLoss, guild_id, theme_id);
-}
-
-void Perl__crosszoneaddldonlossbyexpeditionid(uint32 expedition_id, uint32 theme_id)
-{
-	quest_manager.CrossZoneLDoNUpdate(CZUpdateType_Expedition, CZLDoNUpdateSubtype_AddLoss, expedition_id, theme_id);
-}
-
-void Perl__crosszoneaddldonlossbyclientname(const char* client_name, uint32 theme_id)
-{
-	int update_identifier = 0;
-	int points = 1;
-	quest_manager.CrossZoneLDoNUpdate(CZUpdateType_ClientName, CZLDoNUpdateSubtype_AddLoss, update_identifier, theme_id, points, client_name);
-}
-
-void Perl__crosszoneaddldonpointsbycharid(int character_id, uint32 theme_id, int points)
-{
-	quest_manager.CrossZoneLDoNUpdate(CZUpdateType_Character, CZLDoNUpdateSubtype_AddPoints, character_id, theme_id, points);
-}
-
-void Perl__crosszoneaddldonpointsbygroupid(int group_id, uint32 theme_id, int points)
-{
-	quest_manager.CrossZoneLDoNUpdate(CZUpdateType_Group, CZLDoNUpdateSubtype_AddPoints, group_id, theme_id, points);
-}
-
-void Perl__crosszoneaddldonpointsbyraidid(int raid_id, uint32 theme_id, int points)
-{
-	quest_manager.CrossZoneLDoNUpdate(CZUpdateType_Raid, CZLDoNUpdateSubtype_AddPoints, raid_id, theme_id, points);
-}
-
-void Perl__crosszoneaddldonpointsbyguildid(int guild_id, uint32 theme_id, int points)
-{
-	quest_manager.CrossZoneLDoNUpdate(CZUpdateType_Guild, CZLDoNUpdateSubtype_AddPoints, guild_id, theme_id, points);
-}
-
-void Perl__crosszoneaddldonpointsbyexpeditionid(uint32 expedition_id, uint32 theme_id, int points)
-{
-	quest_manager.CrossZoneLDoNUpdate(CZUpdateType_Expedition, CZLDoNUpdateSubtype_AddPoints, expedition_id, theme_id, points);
-}
-
-void Perl__crosszoneaddldonpointsbyclientname(const char* client_name, uint32 theme_id, int points)
-{
-	int update_identifier = 0;
-	quest_manager.CrossZoneLDoNUpdate(CZUpdateType_ClientName, CZLDoNUpdateSubtype_AddPoints, update_identifier, theme_id, points, client_name);
-}
-
-void Perl__crosszoneaddldonwinbycharid(int character_id, uint32 theme_id)
-{
-	quest_manager.CrossZoneLDoNUpdate(CZUpdateType_Character, CZLDoNUpdateSubtype_AddWin, character_id, theme_id);
-}
-
-void Perl__crosszoneaddldonwinbygroupid(int group_id, uint32 theme_id)
-{
-	quest_manager.CrossZoneLDoNUpdate(CZUpdateType_Group, CZLDoNUpdateSubtype_AddWin, group_id, theme_id);
-}
-
-void Perl__crosszoneaddldonwinbyraidid(int raid_id, uint32 theme_id)
-{
-	quest_manager.CrossZoneLDoNUpdate(CZUpdateType_Raid, CZLDoNUpdateSubtype_AddWin, raid_id, theme_id);
-}
-
-void Perl__crosszoneaddldonwinbyguildid(int guild_id, uint32 theme_id)
-{
-	quest_manager.CrossZoneLDoNUpdate(CZUpdateType_Guild, CZLDoNUpdateSubtype_AddWin, guild_id, theme_id);
-}
-
-void Perl__crosszoneaddldonwinbyexpeditionid(uint32 expedition_id, uint32 theme_id)
-{
-	quest_manager.CrossZoneLDoNUpdate(CZUpdateType_Expedition, CZLDoNUpdateSubtype_AddWin, expedition_id, theme_id);
-}
-
-void Perl__crosszoneaddldonwinbyclientname(const char* client_name, uint32 theme_id)
-{
-	int update_identifier = 0;
-	int points = 1;
-	quest_manager.CrossZoneLDoNUpdate(CZUpdateType_ClientName, CZLDoNUpdateSubtype_AddWin, update_identifier, theme_id, points, client_name);
-}
-
-void Perl__crosszoneassigntaskbycharid(int character_id, uint32 task_id)
-{
-	int task_subidentifier = -1;
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_Character, CZTaskUpdateSubtype_AssignTask, character_id, task_id, task_subidentifier, update_count, enforce_level_requirement);
-}
-
-void Perl__crosszoneassigntaskbycharid(int character_id, uint32 task_id, bool enforce_level_requirement)
-{
-	int task_subidentifier = -1;
-	int update_count = 1;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_Character, CZTaskUpdateSubtype_AssignTask, character_id, task_id, task_subidentifier, update_count, enforce_level_requirement);
-}
-
-void Perl__crosszoneassigntaskbygroupid(int group_id, uint32 task_id)
-{
-	int task_subidentifier = -1;
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_Group, CZTaskUpdateSubtype_AssignTask, group_id, task_id, task_subidentifier, update_count, enforce_level_requirement);
-}
-
-void Perl__crosszoneassigntaskbygroupid(int group_id, uint32 task_id, bool enforce_level_requirement)
-{
-	int task_subidentifier = -1;
-	int update_count = 1;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_Group, CZTaskUpdateSubtype_AssignTask, group_id, task_id, task_subidentifier, update_count, enforce_level_requirement);
-}
-
-void Perl__crosszoneassigntaskbyraidid(int raid_id, uint32 task_id)
-{
-	int task_subidentifier = -1;
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_Raid, CZTaskUpdateSubtype_AssignTask, raid_id, task_id, task_subidentifier, update_count, enforce_level_requirement);
-}
-
-void Perl__crosszoneassigntaskbyraidid(int raid_id, uint32 task_id, bool enforce_level_requirement)
-{
-	int task_subidentifier = -1;
-	int update_count = 1;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_Raid, CZTaskUpdateSubtype_AssignTask, raid_id, task_id, task_subidentifier, update_count, enforce_level_requirement);
-}
-
-void Perl__crosszoneassigntaskbyguildid(int guild_id, uint32 task_id)
-{
-	int task_subidentifier = -1;
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_Guild, CZTaskUpdateSubtype_AssignTask, guild_id, task_id, task_subidentifier, update_count, enforce_level_requirement);
-}
-
-void Perl__crosszoneassigntaskbyguildid(int guild_id, uint32 task_id, bool enforce_level_requirement)
-{
-	int task_subidentifier = -1;
-	int update_count = 1;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_Guild, CZTaskUpdateSubtype_AssignTask, guild_id, task_id, task_subidentifier, update_count, enforce_level_requirement);
-}
-
-void Perl__crosszoneassigntaskbyexpeditionid(uint32 expedition_id, uint32 task_id)
-{
-	int task_subidentifier = -1;
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_Expedition, CZTaskUpdateSubtype_AssignTask, expedition_id, task_id, task_subidentifier, update_count, enforce_level_requirement);
-}
-
-void Perl__crosszoneassigntaskbyexpeditionid(uint32 expedition_id, uint32 task_id, bool enforce_level_requirement)
-{
-	int task_subidentifier = -1;
-	int update_count = 1;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_Expedition, CZTaskUpdateSubtype_AssignTask, expedition_id, task_id, task_subidentifier, update_count, enforce_level_requirement);
-}
-
-void Perl__crosszoneassigntaskbyclientname(const char* client_name, uint32 task_id)
-{
-	int update_identifier = 0;
-	int task_subidentifier = -1;
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_ClientName, CZTaskUpdateSubtype_AssignTask, update_identifier, task_id, task_subidentifier, update_count, enforce_level_requirement, client_name);
-}
-
-void Perl__crosszoneassigntaskbyclientname(const char* client_name, uint32 task_id, bool enforce_level_requirement)
-{
-	int update_identifier = 0;
-	int task_subidentifier = -1;
-	int update_count = 1;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_ClientName, CZTaskUpdateSubtype_AssignTask, update_identifier, task_id, task_subidentifier, update_count, enforce_level_requirement, client_name);
-}
-
 void Perl__crosszonecastspellbycharid(int character_id, uint32 spell_id)
 {
 	quest_manager.CrossZoneSpell(CZUpdateType_Character, CZSpellUpdateSubtype_Cast, character_id, spell_id);
@@ -2584,11 +1909,6 @@ void Perl__crosszonecastspellbyraidid(int raid_id, uint32 spell_id)
 void Perl__crosszonecastspellbyguildid(int guild_id, uint32 spell_id)
 {
 	quest_manager.CrossZoneSpell(CZUpdateType_Guild, CZSpellUpdateSubtype_Cast, guild_id, spell_id);
-}
-
-void Perl__crosszonecastspellbyexpeditionid(uint32 expedition_id, uint32 spell_id)
-{
-	quest_manager.CrossZoneSpell(CZUpdateType_Expedition, CZSpellUpdateSubtype_Cast, expedition_id, spell_id);
 }
 
 void Perl__crosszonecastspellbyclientname(const char* client_name, uint32 spell_id)
@@ -2617,162 +1937,10 @@ void Perl__crosszonedialoguewindowbyguildid(int guild_id, const char* message)
 	quest_manager.CrossZoneDialogueWindow(CZUpdateType_Guild, guild_id, message);
 }
 
-void Perl__crosszonedialoguewindowbyexpeditionid(uint32 expedition_id, const char* message)
-{
-	quest_manager.CrossZoneDialogueWindow(CZUpdateType_Expedition, expedition_id, message);
-}
-
 void Perl__crosszonedialoguewindowbyclientname(const char* client_name, const char* message)
 {
 	int update_identifier = 0;
 	quest_manager.CrossZoneDialogueWindow(CZUpdateType_ClientName, update_identifier, message, client_name);
-}
-
-void Perl__crosszonedisabletaskbycharid(int character_id, uint32 task_id)
-{
-	int task_subidentifier = -1;
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_Character, CZTaskUpdateSubtype_DisableTask, character_id, task_id, task_subidentifier, update_count, enforce_level_requirement);
-}
-
-void Perl__crosszonedisabletaskbygroupid(int group_id, uint32 task_id)
-{
-	int task_subidentifier = -1;
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_Group, CZTaskUpdateSubtype_DisableTask, group_id, task_id, task_subidentifier, update_count, enforce_level_requirement);
-}
-
-void Perl__crosszonedisabletaskbyraidid(int raid_id, uint32 task_id)
-{
-	int task_subidentifier = -1;
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_Raid, CZTaskUpdateSubtype_DisableTask, raid_id, task_id, task_subidentifier, update_count, enforce_level_requirement);
-}
-
-void Perl__crosszonedisabletaskbyguildid(int guild_id, uint32 task_id)
-{
-	int task_subidentifier = -1;
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_Guild, CZTaskUpdateSubtype_DisableTask, guild_id, task_id, task_subidentifier, update_count, enforce_level_requirement);
-}
-
-void Perl__crosszonedisabletaskbyexpeditionid(uint32 expedition_id, uint32 task_id)
-{
-	int task_subidentifier = -1;
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_Expedition, CZTaskUpdateSubtype_DisableTask, expedition_id, task_id, task_subidentifier, update_count, enforce_level_requirement);
-}
-
-void Perl__crosszonedisabletaskbyclientname(const char* client_name, uint32 task_id)
-{
-	int update_identifier = 0;
-	int task_subidentifier = -1;
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_ClientName, CZTaskUpdateSubtype_DisableTask, update_identifier, task_id, task_subidentifier, update_count, enforce_level_requirement, client_name);
-}
-
-void Perl__crosszoneenabletaskbycharid(int character_id, uint32 task_id)
-{
-	int task_subidentifier = -1;
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_Character, CZTaskUpdateSubtype_EnableTask, character_id, task_id, task_subidentifier, update_count, enforce_level_requirement);
-}
-
-void Perl__crosszoneenabletaskbygroupid(int group_id, uint32 task_id)
-{
-	int task_subidentifier = -1;
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_Group, CZTaskUpdateSubtype_EnableTask, group_id, task_id, task_subidentifier, update_count, enforce_level_requirement);
-}
-
-void Perl__crosszoneenabletaskbyraidid(int raid_id, uint32 task_id)
-{
-	int task_subidentifier = -1;
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_Raid, CZTaskUpdateSubtype_EnableTask, raid_id, task_id, task_subidentifier, update_count, enforce_level_requirement);
-}
-
-void Perl__crosszoneenabletaskbyguildid(int guild_id, uint32 task_id)
-{
-	int task_subidentifier = -1;
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_Guild, CZTaskUpdateSubtype_EnableTask, guild_id, task_id, task_subidentifier, update_count, enforce_level_requirement);
-}
-
-void Perl__crosszoneenabletaskbyexpeditionid(uint32 expedition_id, uint32 task_id)
-{
-	int task_subidentifier = -1;
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_Expedition, CZTaskUpdateSubtype_EnableTask, expedition_id, task_id, task_subidentifier, update_count, enforce_level_requirement);
-}
-
-void Perl__crosszoneenabletaskbyclientname(const char* client_name, uint32 task_id)
-{
-	int update_identifier = 0;
-	int task_subidentifier = -1;
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_ClientName, CZTaskUpdateSubtype_EnableTask, update_identifier, task_id, task_subidentifier, update_count, enforce_level_requirement, client_name);
-}
-
-void Perl__crosszonefailtaskbycharid(int character_id, uint32 task_id)
-{
-	int task_subidentifier = -1;
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_Character, CZTaskUpdateSubtype_FailTask, character_id, task_id, task_subidentifier, update_count, enforce_level_requirement);
-}
-
-void Perl__crosszonefailtaskbygroupid(int group_id, uint32 task_id)
-{
-	int task_subidentifier = -1;
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_Group, CZTaskUpdateSubtype_FailTask, group_id, task_id, task_subidentifier, update_count, enforce_level_requirement);
-}
-
-void Perl__crosszonefailtaskbyraidid(int raid_id, uint32 task_id)
-{
-	int task_subidentifier = -1;
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_Raid, CZTaskUpdateSubtype_FailTask, raid_id, task_id, task_subidentifier, update_count, enforce_level_requirement);
-}
-
-void Perl__crosszonefailtaskbyguildid(int guild_id, uint32 task_id)
-{
-	int task_subidentifier = -1;
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_Guild, CZTaskUpdateSubtype_FailTask, guild_id, task_id, task_subidentifier, update_count, enforce_level_requirement);
-}
-
-void Perl__crosszonefailtaskbyexpeditionid(uint32 expedition_id, uint32 task_id)
-{
-	int task_subidentifier = -1;
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_Expedition, CZTaskUpdateSubtype_FailTask, expedition_id, task_id, task_subidentifier, update_count, enforce_level_requirement);
-}
-
-void Perl__crosszonefailtaskbyclientname(const char* client_name, uint32 task_id)
-{
-	int update_identifier = 0;
-	int task_subidentifier = -1;
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_ClientName, CZTaskUpdateSubtype_FailTask, update_identifier, task_id, task_subidentifier, update_count, enforce_level_requirement, client_name);
 }
 
 void Perl__crosszonemarqueebycharid(int character_id, uint32 type, uint32 priority, uint32 fade_in, uint32 fade_out, uint32 duration, const char* message)
@@ -2793,11 +1961,6 @@ void Perl__crosszonemarqueebyraidid(int raid_id, uint32 type, uint32 priority, u
 void Perl__crosszonemarqueebyguildid(int guild_id, uint32 type, uint32 priority, uint32 fade_in, uint32 fade_out, uint32 duration, const char* message)
 {
 	quest_manager.CrossZoneMarquee(CZUpdateType_Guild, guild_id, type, priority, fade_in, fade_out, duration, message);
-}
-
-void Perl__crosszonemarqueebyexpeditionid(uint32 expedition_id, uint32 type, uint32 priority, uint32 fade_in, uint32 fade_out, uint32 duration, const char* message)
-{
-	quest_manager.CrossZoneMarquee(CZUpdateType_Expedition, expedition_id, type, priority, fade_in, fade_out, duration, message);
 }
 
 void Perl__crosszonemarqueebyclientname(const char* client_name, uint32 type, uint32 priority, uint32 fade_in, uint32 fade_out, uint32 duration, const char* message)
@@ -2826,11 +1989,6 @@ void Perl__crosszonemessageplayerbyguildid(int guild_id, uint32 type, const char
 	quest_manager.CrossZoneMessage(CZUpdateType_Guild, guild_id, type, message);
 }
 
-void Perl__crosszonemessageplayerbyexpeditionid(uint32 expedition_id, uint32 type, const char* message)
-{
-	quest_manager.CrossZoneMessage(CZUpdateType_Expedition, expedition_id, type, message);
-}
-
 void Perl__crosszonemessageplayerbyname(const char* client_name, uint32 type, const char* message)
 {
 	int update_identifier = 0;
@@ -2839,140 +1997,28 @@ void Perl__crosszonemessageplayerbyname(const char* client_name, uint32 type, co
 
 void Perl__crosszonemoveplayerbycharid(int character_id, const char* zone_short_name)
 {
-	uint16 instance_id = 0;
-	quest_manager.CrossZoneMove(CZUpdateType_Character, CZMoveUpdateSubtype_MoveZone, character_id, zone_short_name, instance_id);
+	quest_manager.CrossZoneMove(CZUpdateType_Character, CZMoveUpdateSubtype_MoveZone, character_id, zone_short_name);
 }
 
 void Perl__crosszonemoveplayerbygroupid(int group_id, const char* zone_short_name)
 {
-	uint16 instance_id = 0;
-	quest_manager.CrossZoneMove(CZUpdateType_Group, CZMoveUpdateSubtype_MoveZone, group_id, zone_short_name, instance_id);
+	quest_manager.CrossZoneMove(CZUpdateType_Group, CZMoveUpdateSubtype_MoveZone, group_id, zone_short_name);
 }
 
 void Perl__crosszonemoveplayerbyraidid(int raid_id, const char* zone_short_name)
 {
-	uint16 instance_id = 0;
-	quest_manager.CrossZoneMove(CZUpdateType_Raid, CZMoveUpdateSubtype_MoveZone, raid_id, zone_short_name, instance_id);
+	quest_manager.CrossZoneMove(CZUpdateType_Raid, CZMoveUpdateSubtype_MoveZone, raid_id, zone_short_name);
 }
 
 void Perl__crosszonemoveplayerbyguildid(int guild_id, const char* zone_short_name)
 {
-	uint16 instance_id = 0;
-	quest_manager.CrossZoneMove(CZUpdateType_Guild, CZMoveUpdateSubtype_MoveZone, guild_id, zone_short_name, instance_id);
-}
-
-void Perl__crosszonemoveplayerbyexpeditionid(uint32 expedition_id, const char* zone_short_name)
-{
-	uint16 instance_id = 0;
-	quest_manager.CrossZoneMove(CZUpdateType_Expedition, CZMoveUpdateSubtype_MoveZone, expedition_id, zone_short_name, instance_id);
+	quest_manager.CrossZoneMove(CZUpdateType_Guild, CZMoveUpdateSubtype_MoveZone, guild_id, zone_short_name);
 }
 
 void Perl__crosszonemoveplayerbyname(const char* client_name, const char* zone_short_name)
 {
 	int update_identifier = 0;
-	uint16 instance_id = 0;
-	quest_manager.CrossZoneMove(CZUpdateType_ClientName, CZMoveUpdateSubtype_MoveZone, update_identifier, zone_short_name, instance_id, client_name);
-}
-
-void Perl__crosszonemoveinstancebycharid(int character_id, uint16 instance_id)
-{
-	const char* zone_short_name = "";
-	quest_manager.CrossZoneMove(CZUpdateType_Character, CZMoveUpdateSubtype_MoveZoneInstance, character_id, zone_short_name, instance_id);
-}
-
-void Perl__crosszonemoveinstancebygroupid(int group_id, uint16 instance_id)
-{
-	const char* zone_short_name = "";
-	quest_manager.CrossZoneMove(CZUpdateType_Group, CZMoveUpdateSubtype_MoveZoneInstance, group_id, zone_short_name, instance_id);
-}
-
-void Perl__crosszonemoveinstancebyraidid(int raid_id, uint16 instance_id)
-{
-	const char* zone_short_name = "";
-	quest_manager.CrossZoneMove(CZUpdateType_Raid, CZMoveUpdateSubtype_MoveZoneInstance, raid_id, zone_short_name, instance_id);
-}
-
-void Perl__crosszonemoveinstancebyguildid(int guild_id, uint16 instance_id)
-{
-	const char* zone_short_name = "";
-	quest_manager.CrossZoneMove(CZUpdateType_Guild, CZMoveUpdateSubtype_MoveZoneInstance, guild_id, zone_short_name, instance_id);
-}
-
-void Perl__crosszonemoveinstancebyexpeditionid(uint32 expedition_id, uint16 instance_id)
-{
-	const char* zone_short_name = "";
-	quest_manager.CrossZoneMove(CZUpdateType_Expedition, CZMoveUpdateSubtype_MoveZoneInstance, expedition_id, zone_short_name, instance_id);
-}
-
-void Perl__crosszonemoveinstancebyclientname(const char* client_name, uint16 instance_id)
-{
-	int update_identifier = 0;
-	const char* zone_short_name = "";
-	quest_manager.CrossZoneMove(CZUpdateType_ClientName, CZMoveUpdateSubtype_MoveZoneInstance, update_identifier, zone_short_name, instance_id, client_name);
-}
-
-void Perl__crosszoneremoveldonlossbycharid(int character_id, uint32 theme_id)
-{
-	quest_manager.CrossZoneLDoNUpdate(CZUpdateType_Character, CZLDoNUpdateSubtype_RemoveLoss, character_id, theme_id);
-}
-
-void Perl__crosszoneremoveldonlossbygroupid(int group_id, uint32 theme_id)
-{
-	quest_manager.CrossZoneLDoNUpdate(CZUpdateType_Group, CZLDoNUpdateSubtype_RemoveLoss, group_id, theme_id);
-}
-
-void Perl__crosszoneremoveldonlossbyraidid(int raid_id, uint32 theme_id)
-{
-	quest_manager.CrossZoneLDoNUpdate(CZUpdateType_Raid, CZLDoNUpdateSubtype_RemoveLoss, raid_id, theme_id);
-}
-
-void Perl__crosszoneremoveldonlossbyguildid(int guild_id, uint32 theme_id)
-{
-	quest_manager.CrossZoneLDoNUpdate(CZUpdateType_Guild, CZLDoNUpdateSubtype_RemoveLoss, guild_id, theme_id);
-}
-
-void Perl__crosszoneremoveldonlossbyexpeditionid(uint32 expedition_id, uint32 theme_id)
-{
-	quest_manager.CrossZoneLDoNUpdate(CZUpdateType_Expedition, CZLDoNUpdateSubtype_RemoveLoss, expedition_id, theme_id);
-}
-
-void Perl__crosszoneremoveldonlossbyclientname(const char* client_name, uint32 theme_id)
-{
-	int update_identifier = 0;
-	int points = 1;
-	quest_manager.CrossZoneLDoNUpdate(CZUpdateType_ClientName, CZLDoNUpdateSubtype_RemoveLoss, update_identifier, theme_id, points, client_name);
-}
-
-void Perl__crosszoneremoveldonwinbycharid(int character_id, uint32 theme_id)
-{
-	quest_manager.CrossZoneLDoNUpdate(CZUpdateType_Character, CZLDoNUpdateSubtype_RemoveWin, character_id, theme_id);
-}
-
-void Perl__crosszoneremoveldonwinbygroupid(int group_id, uint32 theme_id)
-{
-	quest_manager.CrossZoneLDoNUpdate(CZUpdateType_Group, CZLDoNUpdateSubtype_RemoveWin, group_id, theme_id);
-}
-
-void Perl__crosszoneremoveldonwinbyraidid(int raid_id, uint32 theme_id)
-{
-	quest_manager.CrossZoneLDoNUpdate(CZUpdateType_Raid, CZLDoNUpdateSubtype_RemoveWin, raid_id, theme_id);
-}
-
-void Perl__crosszoneremoveldonwinbyguildid(int guild_id, uint32 theme_id)
-{
-	quest_manager.CrossZoneLDoNUpdate(CZUpdateType_Guild, CZLDoNUpdateSubtype_RemoveWin, guild_id, theme_id);
-}
-
-void Perl__crosszoneremoveldonwinbyexpeditionid(uint32 expedition_id, uint32 theme_id)
-{
-	quest_manager.CrossZoneLDoNUpdate(CZUpdateType_Expedition, CZLDoNUpdateSubtype_RemoveWin, expedition_id, theme_id);
-}
-
-void Perl__crosszoneremoveldonwinbyclientname(const char* client_name, uint32 theme_id)
-{
-	int update_identifier = 0;
-	int points = 1;
-	quest_manager.CrossZoneLDoNUpdate(CZUpdateType_ClientName, CZLDoNUpdateSubtype_RemoveWin, update_identifier, theme_id, points, client_name);
+	quest_manager.CrossZoneMove(CZUpdateType_ClientName, CZMoveUpdateSubtype_MoveZone, update_identifier, zone_short_name, client_name);
 }
 
 void Perl__crosszoneremovespellbycharid(int character_id, uint32 spell_id)
@@ -2995,107 +2041,10 @@ void Perl__crosszoneremovespellbyguildid(int guild_id, uint32 spell_id)
 	quest_manager.CrossZoneSpell(CZUpdateType_Guild, CZSpellUpdateSubtype_Remove, guild_id, spell_id);
 }
 
-void Perl__crosszoneremovespellbyexpeditionid(uint32 expedition_id, uint32 spell_id)
-{
-	quest_manager.CrossZoneSpell(CZUpdateType_Expedition, CZSpellUpdateSubtype_Remove, expedition_id, spell_id);
-}
-
 void Perl__crosszoneremovespellbyclientname(const char* client_name, uint32 spell_id)
 {
 	int update_identifier = 0;
 	quest_manager.CrossZoneSpell(CZUpdateType_ClientName, CZSpellUpdateSubtype_Remove, update_identifier, spell_id, client_name);
-}
-
-void Perl__crosszoneremovetaskbycharid(int character_id, uint32 task_id)
-{
-	int task_subidentifier = -1;
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_Character, CZTaskUpdateSubtype_RemoveTask, character_id, task_id, task_subidentifier, update_count, enforce_level_requirement);
-}
-
-void Perl__crosszoneremovetaskbygroupid(int group_id, uint32 task_id)
-{
-	int task_subidentifier = -1;
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_Group, CZTaskUpdateSubtype_RemoveTask, group_id, task_id, task_subidentifier, update_count, enforce_level_requirement);
-}
-
-void Perl__crosszoneremovetaskbyraidid(int raid_id, uint32 task_id)
-{
-	int task_subidentifier = -1;
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_Raid, CZTaskUpdateSubtype_RemoveTask, raid_id, task_id, task_subidentifier, update_count, enforce_level_requirement);
-}
-
-void Perl__crosszoneremovetaskbyguildid(int guild_id, uint32 task_id)
-{
-	int task_subidentifier = -1;
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_Guild, CZTaskUpdateSubtype_RemoveTask, guild_id, task_id, task_subidentifier, update_count, enforce_level_requirement);
-}
-
-void Perl__crosszoneremovetaskbyexpeditionid(uint32 expedition_id, uint32 task_id)
-{
-	int task_subidentifier = -1;
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_Expedition, CZTaskUpdateSubtype_RemoveTask, expedition_id, task_id, task_subidentifier, update_count, enforce_level_requirement);
-}
-
-void Perl__crosszoneremovetaskbyclientname(const char* client_name, uint32 task_id)
-{
-	int update_identifier = 0;
-	int task_subidentifier = -1;
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_ClientName, CZTaskUpdateSubtype_RemoveTask, update_identifier, task_id, task_subidentifier, update_count, enforce_level_requirement, client_name);
-}
-
-void Perl__crosszoneresetactivitybycharid(int character_id, uint32 task_id, int activity_id)
-{
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_Character, CZTaskUpdateSubtype_ActivityReset, character_id, task_id, activity_id, update_count, enforce_level_requirement);
-}
-
-void Perl__crosszoneresetactivitybygroupid(int group_id, uint32 task_id, int activity_id)
-{
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_Group, CZTaskUpdateSubtype_ActivityReset, group_id, task_id, activity_id, update_count, enforce_level_requirement);
-}
-
-void Perl__crosszoneresetactivitybyraidid(int raid_id, uint32 task_id, int activity_id)
-{
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_Raid, CZTaskUpdateSubtype_ActivityReset, raid_id, task_id, activity_id, update_count, enforce_level_requirement);
-}
-
-void Perl__crosszoneresetactivitybyguildid(int guild_id, uint32 task_id, int activity_id)
-{
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_Guild, CZTaskUpdateSubtype_ActivityReset, guild_id, task_id, activity_id, update_count, enforce_level_requirement);
-}
-
-void Perl__crosszoneresetactivitybyexpeditionid(uint32 expedition_id, uint32 task_id, int activity_id)
-{
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_Expedition, CZTaskUpdateSubtype_ActivityReset, expedition_id, task_id, activity_id, update_count, enforce_level_requirement);
-}
-
-void Perl__crosszoneresetactivitybyclientname(const char* client_name, uint32 task_id, int activity_id)
-{
-	int update_identifier = 0;
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_ClientName, CZTaskUpdateSubtype_ActivityReset, update_identifier, task_id, activity_id, update_count, enforce_level_requirement, client_name);
 }
 
 void Perl__crosszonesetentityvariablebycharid(int character_id, const char* variable_name, const char* variable_value)
@@ -3116,11 +2065,6 @@ void Perl__crosszonesetentityvariablebyraidid(int raid_id, const char* variable_
 void Perl__crosszonesetentityvariablebyguildid(int guild_id, const char* variable_name, const char* variable_value)
 {
 	quest_manager.CrossZoneSetEntityVariable(CZUpdateType_Guild, guild_id, variable_name, variable_value);
-}
-
-void Perl__crosszonesetentityvariablebyexpeditionid(uint32 expedition_id, const char* variable_name, const char* variable_value)
-{
-	quest_manager.CrossZoneSetEntityVariable(CZUpdateType_Expedition, expedition_id, variable_name, variable_value);
 }
 
 void Perl__crosszonesetentityvariablebyclientname(const char* client_name, const char* variable_name, const char* variable_value)
@@ -3154,11 +2098,6 @@ void Perl__crosszonesignalclientbyguildid(int guild_id, int signal)
 	quest_manager.CrossZoneSignal(CZUpdateType_Guild, guild_id, signal);
 }
 
-void Perl__crosszonesignalclientbyexpeditionid(uint32 expedition_id, int signal)
-{
-	quest_manager.CrossZoneSignal(CZUpdateType_Expedition, expedition_id, signal);
-}
-
 void Perl__crosszonesignalclientbyname(const char* client_name, int signal)
 {
 	int update_identifier = 0;
@@ -3168,168 +2107,6 @@ void Perl__crosszonesignalclientbyname(const char* client_name, int signal)
 void Perl__crosszonesignalnpcbynpctypeid(uint32 npc_id, int signal)
 {
 	quest_manager.CrossZoneSignal(CZUpdateType_NPC, npc_id, signal);
-}
-
-void Perl__crosszoneupdateactivitybycharid(int character_id, uint32 task_id, int activity_id)
-{
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_Character, CZTaskUpdateSubtype_ActivityUpdate, character_id, task_id, activity_id, update_count, enforce_level_requirement);
-}
-
-void Perl__crosszoneupdateactivitybycharid(int character_id, uint32 task_id, int activity_id, int update_count)
-{
-	bool enforce_level_requirement = false;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_Character, CZTaskUpdateSubtype_ActivityUpdate, character_id, task_id, activity_id, update_count, enforce_level_requirement);
-}
-
-void Perl__crosszoneupdateactivitybygroupid(int group_id, uint32 task_id, int activity_id)
-{
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_Group, CZTaskUpdateSubtype_ActivityUpdate, group_id, task_id, activity_id, update_count, enforce_level_requirement);
-}
-
-void Perl__crosszoneupdateactivitybygroupid(int group_id, uint32 task_id, int activity_id, int update_count)
-{
-	bool enforce_level_requirement = false;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_Group, CZTaskUpdateSubtype_ActivityUpdate, group_id, task_id, activity_id, update_count, enforce_level_requirement);
-}
-
-void Perl__crosszoneupdateactivitybyraidid(int raid_id, uint32 task_id, int activity_id)
-{
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_Raid, CZTaskUpdateSubtype_ActivityUpdate, raid_id, task_id, activity_id, update_count, enforce_level_requirement);
-}
-
-void Perl__crosszoneupdateactivitybyraidid(int raid_id, uint32 task_id, int activity_id, int update_count)
-{
-	bool enforce_level_requirement = false;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_Raid, CZTaskUpdateSubtype_ActivityUpdate, raid_id, task_id, activity_id, update_count, enforce_level_requirement);
-}
-
-void Perl__crosszoneupdateactivitybyguildid(int guild_id, uint32 task_id, int activity_id)
-{
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_Guild, CZTaskUpdateSubtype_ActivityUpdate, guild_id, task_id, activity_id, update_count, enforce_level_requirement);
-}
-
-void Perl__crosszoneupdateactivitybyguildid(int guild_id, uint32 task_id, int activity_id, int update_count)
-{
-	bool enforce_level_requirement = false;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_Guild, CZTaskUpdateSubtype_ActivityUpdate, guild_id, task_id, activity_id, update_count, enforce_level_requirement);
-}
-
-void Perl__crosszoneupdateactivitybyexpeditionid(uint32 expedition_id, uint32 task_id, int activity_id)
-{
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_Expedition, CZTaskUpdateSubtype_ActivityUpdate, expedition_id, task_id, activity_id, update_count, enforce_level_requirement);
-}
-
-void Perl__crosszoneupdateactivitybyexpeditionid(uint32 expedition_id, uint32 task_id, int activity_id, int update_count)
-{
-	bool enforce_level_requirement = false;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_Expedition, CZTaskUpdateSubtype_ActivityUpdate, expedition_id, task_id, activity_id, update_count, enforce_level_requirement);
-}
-
-void Perl__crosszoneupdateactivitybyclientname(const char* client_name, uint32 task_id, int activity_id)
-{
-	int update_identifier = 0;
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_ClientName, CZTaskUpdateSubtype_ActivityUpdate, update_identifier, task_id, activity_id, update_count, enforce_level_requirement, client_name);
-}
-
-void Perl__crosszoneupdateactivitybyclientname(const char* client_name, uint32 task_id, int activity_id, int update_count)
-{
-	int update_identifier = 0;
-	bool enforce_level_requirement = false;
-	quest_manager.CrossZoneTaskUpdate(CZUpdateType_ClientName, CZTaskUpdateSubtype_ActivityUpdate, update_identifier, task_id, activity_id, update_count, enforce_level_requirement, client_name);
-}
-
-void Perl__worldwideaddldonloss(uint32 theme_id)
-{
-	quest_manager.WorldWideLDoNUpdate(CZLDoNUpdateSubtype_AddLoss, theme_id);
-}
-
-void Perl__worldwideaddldonloss(uint32 theme_id, uint8 min_status)
-{
-	int points = 1;
-	quest_manager.WorldWideLDoNUpdate(CZLDoNUpdateSubtype_AddLoss, theme_id, points, min_status);
-}
-
-void Perl__worldwideaddldonloss(uint32 theme_id, uint8 min_status, uint8 max_status)
-{
-	int points = 1;
-	quest_manager.WorldWideLDoNUpdate(CZLDoNUpdateSubtype_AddLoss, theme_id, points, min_status, max_status);
-}
-
-void Perl__worldwideaddldonpoints(uint32 theme_id)
-{
-	int points = 1;
-	quest_manager.WorldWideLDoNUpdate(CZLDoNUpdateSubtype_AddPoints, theme_id, points);
-}
-
-void Perl__worldwideaddldonpoints(uint32 theme_id, int points)
-{
-	quest_manager.WorldWideLDoNUpdate(CZLDoNUpdateSubtype_AddPoints, theme_id, points);
-}
-
-void Perl__worldwideaddldonpoints(uint32 theme_id, int points, uint8 min_status)
-{
-	quest_manager.WorldWideLDoNUpdate(CZLDoNUpdateSubtype_AddPoints, theme_id, points, min_status);
-}
-
-void Perl__worldwideaddldonpoints(uint32 theme_id, int points, uint8 min_status, uint8 max_status)
-{
-	quest_manager.WorldWideLDoNUpdate(CZLDoNUpdateSubtype_AddPoints, theme_id, points, min_status, max_status);
-}
-
-void Perl__worldwideaddldonwin(uint32 theme_id)
-{
-	int points = 1;
-	quest_manager.WorldWideLDoNUpdate(CZLDoNUpdateSubtype_AddWin, theme_id, points);
-}
-
-void Perl__worldwideaddldonwin(uint32 theme_id, uint8 min_status)
-{
-	int points = 1;
-	quest_manager.WorldWideLDoNUpdate(CZLDoNUpdateSubtype_AddWin, theme_id, points, min_status);
-}
-
-void Perl__worldwideaddldonwin(uint32 theme_id, uint8 min_status, uint8 max_status)
-{
-	int points = 1;
-	quest_manager.WorldWideLDoNUpdate(CZLDoNUpdateSubtype_AddWin, theme_id, points, min_status, max_status);
-}
-
-void Perl__worldwideassigntask(uint32 task_id)
-{
-	quest_manager.WorldWideTaskUpdate(WWTaskUpdateType_AssignTask, task_id);
-}
-
-void Perl__worldwideassigntask(uint32 task_id, bool enforce_level_requirement)
-{
-	int task_subidentifier = -1;
-	int update_count = 1;
-	quest_manager.WorldWideTaskUpdate(WWTaskUpdateType_AssignTask, task_id, task_subidentifier, update_count, enforce_level_requirement);
-}
-
-void Perl__worldwideassigntask(uint32 task_id, bool enforce_level_requirement, uint8 min_status)
-{
-	int task_subidentifier = -1;
-	int update_count = 1;
-	quest_manager.WorldWideTaskUpdate(WWTaskUpdateType_AssignTask, task_id, task_subidentifier, update_count, enforce_level_requirement, min_status);
-}
-
-void Perl__worldwideassigntask(uint32 task_id, bool enforce_level_requirement, uint8 min_status, uint8 max_status)
-{
-	int task_subidentifier = -1;
-	int update_count = 1;
-	quest_manager.WorldWideTaskUpdate(WWTaskUpdateType_AssignTask, task_id, task_subidentifier, update_count, enforce_level_requirement, min_status, max_status);
 }
 
 void Perl__worldwidecastspell(uint32 spell_id)
@@ -3360,69 +2137,6 @@ void Perl__worldwidedialoguewindow(const char* message, uint8 min_status)
 void Perl__worldwidedialoguewindow(const char* message, uint8 min_status, uint8 max_status)
 {
 	quest_manager.WorldWideDialogueWindow(message, min_status, max_status);
-}
-
-void Perl__worldwidedisabletask(uint32 task_id)
-{
-	quest_manager.WorldWideTaskUpdate(WWTaskUpdateType_DisableTask, task_id);
-}
-
-void Perl__worldwidedisabletask(uint32 task_id, uint8 min_status)
-{
-	int task_subidentifier = -1;
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.WorldWideTaskUpdate(WWTaskUpdateType_DisableTask, task_id, task_subidentifier, update_count, enforce_level_requirement, min_status);
-}
-
-void Perl__worldwidedisabletask(uint32 task_id, uint8 min_status, uint8 max_status)
-{
-	int task_subidentifier = -1;
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.WorldWideTaskUpdate(WWTaskUpdateType_DisableTask, task_id, task_subidentifier, update_count, enforce_level_requirement, min_status, max_status);
-}
-
-void Perl__worldwideenabletask(uint32 task_id)
-{
-	quest_manager.WorldWideTaskUpdate(WWTaskUpdateType_EnableTask, task_id);
-}
-
-void Perl__worldwideenabletask(uint32 task_id, uint8 min_status)
-{
-	int task_subidentifier = -1;
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.WorldWideTaskUpdate(WWTaskUpdateType_EnableTask, task_id, task_subidentifier, update_count, enforce_level_requirement, min_status);
-}
-
-void Perl__worldwideenabletask(uint32 task_id, uint8 min_status, uint8 max_status)
-{
-	int task_subidentifier = -1;
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.WorldWideTaskUpdate(WWTaskUpdateType_EnableTask, task_id, task_subidentifier, update_count, enforce_level_requirement, min_status, max_status);
-}
-
-void Perl__worldwidefailtask(uint32 task_id)
-{
-	quest_manager.WorldWideTaskUpdate(WWTaskUpdateType_FailTask, task_id);
-}
-
-void Perl__worldwidefailtask(uint32 task_id, uint8 min_status)
-{
-	int task_subidentifier = -1;
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.WorldWideTaskUpdate(WWTaskUpdateType_FailTask, task_id, task_subidentifier, update_count, enforce_level_requirement, min_status);
-}
-
-void Perl__worldwidefailtask(uint32 task_id, uint8 min_status, uint8 max_status)
-{
-	int task_subidentifier = -1;
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.WorldWideTaskUpdate(WWTaskUpdateType_FailTask, task_id, task_subidentifier, update_count, enforce_level_requirement, min_status, max_status);
 }
 
 void Perl__worldwidemarquee(uint32 type, uint32 priority, uint32 fade_in, uint32 fade_out, uint32 duration, const char* message)
@@ -3462,66 +2176,12 @@ void Perl__worldwidemove(const char* zone_short_name)
 
 void Perl__worldwidemove(const char* zone_short_name, uint8 min_status)
 {
-	uint16 instance_id = 0;
-	quest_manager.WorldWideMove(WWMoveUpdateType_MoveZone, zone_short_name, instance_id, min_status);
+	quest_manager.WorldWideMove(WWMoveUpdateType_MoveZone, zone_short_name, min_status);
 }
 
 void Perl__worldwidemove(const char* zone_short_name, uint8 min_status, uint8 max_status)
 {
-	uint16 instance_id = 0;
-	quest_manager.WorldWideMove(WWMoveUpdateType_MoveZone, zone_short_name, instance_id, min_status, max_status);
-}
-
-void Perl__worldwidemoveinstance(uint16 instance_id)
-{
-	const char* zone_short_name = "";
-	quest_manager.WorldWideMove(WWMoveUpdateType_MoveZoneInstance, zone_short_name, instance_id);
-}
-
-void Perl__worldwidemoveinstance(uint16 instance_id, uint8 min_status)
-{
-	const char* zone_short_name = "";
-	quest_manager.WorldWideMove(WWMoveUpdateType_MoveZoneInstance, zone_short_name, instance_id, min_status);
-}
-
-void Perl__worldwidemoveinstance(uint16 instance_id, uint8 min_status, uint8 max_status)
-{
-	const char* zone_short_name = "";
-	quest_manager.WorldWideMove(WWMoveUpdateType_MoveZoneInstance, zone_short_name, instance_id, min_status, max_status);
-}
-
-void Perl__worldwideremoveldonloss(uint32 theme_id)
-{
-	quest_manager.WorldWideLDoNUpdate(CZLDoNUpdateSubtype_RemoveLoss, theme_id);
-}
-
-void Perl__worldwideremoveldonloss(uint32 theme_id, uint8 min_status)
-{
-	int points = 1;
-	quest_manager.WorldWideLDoNUpdate(CZLDoNUpdateSubtype_RemoveLoss, theme_id, points, min_status);
-}
-
-void Perl__worldwideremoveldonloss(uint32 theme_id, uint8 min_status, uint8 max_status)
-{
-	int points = 1;
-	quest_manager.WorldWideLDoNUpdate(CZLDoNUpdateSubtype_RemoveLoss, theme_id, points, min_status, max_status);
-}
-
-void Perl__worldwideremoveldonwin(uint32 theme_id)
-{
-	quest_manager.WorldWideLDoNUpdate(CZLDoNUpdateSubtype_RemoveWin, theme_id);
-}
-
-void Perl__worldwideremoveldonwin(uint32 theme_id, uint8 min_status)
-{
-	int points = 1;
-	quest_manager.WorldWideLDoNUpdate(CZLDoNUpdateSubtype_RemoveWin, theme_id, points, min_status);
-}
-
-void Perl__worldwideremoveldonwin(uint32 theme_id, uint8 min_status, uint8 max_status)
-{
-	int points = 1;
-	quest_manager.WorldWideLDoNUpdate(CZLDoNUpdateSubtype_RemoveWin, theme_id, points, min_status, max_status);
+	quest_manager.WorldWideMove(WWMoveUpdateType_MoveZone, zone_short_name, min_status, max_status);
 }
 
 void Perl__worldwideremovespell(uint32 spell_id)
@@ -3537,46 +2197,6 @@ void Perl__worldwideremovespell(uint32 spell_id, uint8 min_status)
 void Perl__worldwideremovespell(uint32 spell_id, uint8 min_status, uint8 max_status)
 {
 	quest_manager.WorldWideSpell(WWSpellUpdateType_Remove, spell_id, min_status, max_status);
-}
-
-void Perl__worldwideremovetask(uint32 task_id)
-{
-	quest_manager.WorldWideTaskUpdate(WWTaskUpdateType_RemoveTask, task_id);
-}
-
-void Perl__worldwideremovetask(uint32 task_id, uint8 min_status)
-{
-	int task_subidentifier = -1;
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.WorldWideTaskUpdate(WWTaskUpdateType_RemoveTask, task_id, task_subidentifier, update_count, enforce_level_requirement, min_status);
-}
-
-void Perl__worldwideremovetask(uint32 task_id, uint8 min_status, uint8 max_status)
-{
-	int task_subidentifier = -1;
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.WorldWideTaskUpdate(WWTaskUpdateType_RemoveTask, task_id, task_subidentifier, update_count, enforce_level_requirement, min_status, max_status);
-}
-
-void Perl__worldwideresetactivity(uint32 task_id, int activity_id)
-{
-	quest_manager.WorldWideTaskUpdate(WWTaskUpdateType_ActivityReset, task_id);
-}
-
-void Perl__worldwideresetactivity(uint32 task_id, int activity_id, uint8 min_status)
-{
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.WorldWideTaskUpdate(WWTaskUpdateType_ActivityReset, task_id, activity_id, update_count, enforce_level_requirement, min_status);
-}
-
-void Perl__worldwideresetactivity(uint32 task_id, int activity_id, uint8 min_status, uint8 max_status)
-{
-	int update_count = 1;
-	bool enforce_level_requirement = false;
-	quest_manager.WorldWideTaskUpdate(WWTaskUpdateType_ActivityReset, task_id, activity_id, update_count, enforce_level_requirement, min_status, max_status);
 }
 
 void Perl__worldwidesetentityvariableclient(const char* variable_name, const char* variable_value)
@@ -3619,28 +2239,6 @@ void Perl__worldwidesignalclient(int signal, uint8 min_status, uint8 max_status)
 	quest_manager.WorldWideSignal(WWSignalUpdateType_Character, signal, min_status, max_status);
 }
 
-void Perl__worldwideupdateactivity(uint32 task_id, int activity_id)
-{
-	quest_manager.WorldWideTaskUpdate(WWTaskUpdateType_ActivityUpdate, task_id, activity_id);
-}
-
-void Perl__worldwideupdateactivity(uint32 task_id, int activity_id, int update_count)
-{
-	quest_manager.WorldWideTaskUpdate(WWTaskUpdateType_ActivityUpdate, task_id, activity_id, update_count);
-}
-
-void Perl__worldwideupdateactivity(uint32 task_id, int activity_id, int update_count, uint8 min_status)
-{
-	bool enforce_level_requirement = false;
-	quest_manager.WorldWideTaskUpdate(WWTaskUpdateType_ActivityUpdate, task_id, activity_id, update_count, enforce_level_requirement, min_status);
-}
-
-void Perl__worldwideupdateactivity(uint32 task_id, int activity_id, int update_count, uint8 min_status, uint8 max_status)
-{
-	bool enforce_level_requirement = false;
-	quest_manager.WorldWideTaskUpdate(WWTaskUpdateType_ActivityUpdate, task_id, activity_id, update_count, enforce_level_requirement, min_status, max_status);
-}
-
 bool Perl__isnpcspawned(perl::array npc_id_array)
 {
 	std::vector<uint32> npc_ids;
@@ -3665,11 +2263,6 @@ SPDat_Spell_Struct* Perl__getspell(uint32 spell_id)
 {
 	// should be safe, it's read only in perl (could also use proxy lika lua)
 	return const_cast<SPDat_Spell_Struct*>(quest_manager.getspell(spell_id));
-}
-
-std::string Perl__getldonthemename(uint32 theme_id)
-{
-	return quest_manager.getldonthemename(theme_id);
 }
 
 std::string Perl__getfactionname(int faction_id)
@@ -3864,22 +2457,8 @@ void perl_register_quest()
 	package.add("createBot", &Perl__createBot);
 #endif //BOTS
 
-	package.add("AssignGroupToInstance", &Perl__AssignGroupToInstance);
-	package.add("AssignRaidToInstance", &Perl__AssignRaidToInstance);
-	package.add("AssignToInstance", &Perl__AssignToInstance);
-	package.add("AssignToInstanceByCharID", &Perl__AssignToInstanceByCharID);
 	package.add("ChooseRandom", &Perl__ChooseRandom);
-	package.add("CreateInstance", &Perl__CreateInstance);
-	package.add("DestroyInstance", &Perl__DestroyInstance);
-	package.add("UpdateInstanceTimer", &Perl__UpdateInstanceTimer);
-	package.add("GetInstanceTimer", &Perl__GetInstanceTimer);
-	package.add("GetInstanceTimerByID", &Perl__GetInstanceTimerByID);
-	package.add("FlagInstanceByGroupLeader", &Perl__FlagInstanceByGroupLeader);
-	package.add("FlagInstanceByRaidLeader", &Perl__FlagInstanceByRaidLeader);
 	package.add("FlyMode", &Perl__FlyMode);
-	package.add("GetCharactersInInstance", &Perl__GetCharactersInInstance);
-	package.add("GetInstanceID", &Perl__GetInstanceID);
-	package.add("GetInstanceIDByCharID", &Perl__GetInstanceIDByCharID);
 	package.add("GetSpellResistType", &Perl__GetSpellResistType);
 	package.add("GetSpellTargetType", &Perl__GetSpellTargetType);
 	package.add("GetTimeSeconds", &Perl__GetTimeSeconds);
@@ -3904,30 +2483,12 @@ void perl_register_quest()
 	package.add("MerchantCountItem", &Perl__MerchantCountItem);
 	package.add("MerchantSetItem", (void(*)(uint32, uint32))&Perl__MerchantSetItem);
 	package.add("MerchantSetItem", (void(*)(uint32, uint32, uint32))&Perl__MerchantSetItem);
-	package.add("MovePCInstance", (void(*)(int, int, float, float, float))&Perl__MovePCInstance);
-	package.add("MovePCInstance", (void(*)(int, int, float, float, float, float))&Perl__MovePCInstance);
-	package.add("RemoveAllFromInstance", &Perl__RemoveAllFromInstance);
-	package.add("RemoveFromInstance", &Perl__RemoveFromInstance);
-	package.add("RemoveFromInstanceByCharID", &Perl__RemoveFromInstanceByCharID);
-	package.add("CheckInstanceByCharID", &Perl__CheckInstanceByCharID);
 	package.add("SendMail", &Perl__SendMail);
 	package.add("SetRunning", &Perl__SetRunning);
-	package.add("activespeakactivity", &Perl__activespeakactivity);
-	package.add("activespeaktask", &Perl__activespeaktask);
-	package.add("activetasksinset", &Perl__activetasksinset);
-	package.add("add_expedition_lockout_all_clients", (void(*)(std::string, std::string, uint32))&Perl__add_expedition_lockout_all_clients);
-	package.add("add_expedition_lockout_all_clients", (void(*)(std::string, std::string, uint32, std::string))&Perl__add_expedition_lockout_all_clients);
-	package.add("add_expedition_lockout_by_char_id", (void(*)(uint32, std::string, std::string, uint32))&Perl__add_expedition_lockout_by_char_id);
-	package.add("add_expedition_lockout_by_char_id", (void(*)(uint32, std::string, std::string, uint32, std::string))&Perl__add_expedition_lockout_by_char_id);
-	package.add("addldonloss", &Perl__addldonloss);
-	package.add("addldonpoints", &Perl__addldonpoints);
-	package.add("addldonwin", &Perl__addldonwin);
 	package.add("addloot", (void(*)(int))&Perl__addloot);
 	package.add("addloot", (void(*)(int, int))&Perl__addloot);
 	package.add("addloot", (void(*)(int, int, bool))&Perl__addloot);
 	package.add("addskill", &Perl__addskill);
-	package.add("assigntask", (void(*)(int))&Perl__assigntask);
-	package.add("assigntask", (void(*)(int, bool))&Perl__assigntask);
 	package.add("attack", &Perl__attack);
 	package.add("attacknpc", &Perl__attacknpc);
 	package.add("attacknpctype", &Perl__attacknpctype);
@@ -3942,7 +2503,6 @@ void perl_register_quest()
 	package.add("clearspawntimers", &Perl__clearspawntimers);
 	package.add("collectitems", &Perl__collectitems);
 	package.add("commify", &Perl__commify);
-	package.add("completedtasksinset", &Perl__completedtasksinset);
 	package.add("countitem", &Perl__countitem);
 	package.add("countspawnednpcs", &Perl__countspawnednpcs);
 	package.add("createdoor", (int(*)(const char*, float, float, float, float))&Perl__CreateDoor);
@@ -3963,175 +2523,54 @@ void perl_register_quest()
 	package.add("createitem", (EQ::ItemInstance*(*)(uint32, int16, uint32, uint32, uint32, uint32, uint32))&Perl__createitem);
 	package.add("createitem", (EQ::ItemInstance*(*)(uint32, int16, uint32, uint32, uint32, uint32, uint32, uint32))&Perl__createitem);
 	package.add("createitem", (EQ::ItemInstance*(*)(uint32, int16, uint32, uint32, uint32, uint32, uint32, uint32, bool))&Perl__createitem);
-	package.add("crosszoneaddldonlossbycharid", &Perl__crosszoneaddldonlossbycharid);
-	package.add("crosszoneaddldonlossbygroupid", &Perl__crosszoneaddldonlossbygroupid);
-	package.add("crosszoneaddldonlossbyraidid", &Perl__crosszoneaddldonlossbyraidid);
-	package.add("crosszoneaddldonlossbyguildid", &Perl__crosszoneaddldonlossbyguildid);
-	package.add("crosszoneaddldonlossbyexpeditionid", &Perl__crosszoneaddldonlossbyexpeditionid);
-	package.add("crosszoneaddldonlossbyclientname", &Perl__crosszoneaddldonlossbyclientname);
-	package.add("crosszoneaddldonpointsbycharid", &Perl__crosszoneaddldonpointsbycharid);
-	package.add("crosszoneaddldonpointsbygroupid", &Perl__crosszoneaddldonpointsbygroupid);
-	package.add("crosszoneaddldonpointsbyraidid", &Perl__crosszoneaddldonpointsbyraidid);
-	package.add("crosszoneaddldonpointsbyguildid", &Perl__crosszoneaddldonpointsbyguildid);
-	package.add("crosszoneaddldonpointsbyexpeditionid", &Perl__crosszoneaddldonpointsbyexpeditionid);
-	package.add("crosszoneaddldonpointsbyclientname", &Perl__crosszoneaddldonpointsbyclientname);
-	package.add("crosszoneaddldonwinbycharid", &Perl__crosszoneaddldonwinbycharid);
-	package.add("crosszoneaddldonwinbygroupid", &Perl__crosszoneaddldonwinbygroupid);
-	package.add("crosszoneaddldonwinbyraidid", &Perl__crosszoneaddldonwinbyraidid);
-	package.add("crosszoneaddldonwinbyguildid", &Perl__crosszoneaddldonwinbyguildid);
-	package.add("crosszoneaddldonwinbyexpeditionid", &Perl__crosszoneaddldonwinbyexpeditionid);
-	package.add("crosszoneaddldonwinbyclientname", &Perl__crosszoneaddldonwinbyclientname);
-	package.add("crosszoneassigntaskbycharid", (void(*)(int, uint32))&Perl__crosszoneassigntaskbycharid);
-	package.add("crosszoneassigntaskbycharid", (void(*)(int, uint32, bool))&Perl__crosszoneassigntaskbycharid);
-	package.add("crosszoneassigntaskbygroupid", (void(*)(int, uint32))&Perl__crosszoneassigntaskbygroupid);
-	package.add("crosszoneassigntaskbygroupid", (void(*)(int, uint32, bool))&Perl__crosszoneassigntaskbygroupid);
-	package.add("crosszoneassigntaskbyraidid", (void(*)(int, uint32))&Perl__crosszoneassigntaskbyraidid);
-	package.add("crosszoneassigntaskbyraidid", (void(*)(int, uint32, bool))&Perl__crosszoneassigntaskbyraidid);
-	package.add("crosszoneassigntaskbyguildid", (void(*)(int, uint32))&Perl__crosszoneassigntaskbyguildid);
-	package.add("crosszoneassigntaskbyguildid", (void(*)(int, uint32, bool))&Perl__crosszoneassigntaskbyguildid);
-	package.add("crosszoneassigntaskbyexpeditionid", (void(*)(uint32, uint32))&Perl__crosszoneassigntaskbyexpeditionid);
-	package.add("crosszoneassigntaskbyexpeditionid", (void(*)(uint32, uint32, bool))&Perl__crosszoneassigntaskbyexpeditionid);
-	package.add("crosszoneassigntaskbyclientname", (void(*)(const char*, uint32))&Perl__crosszoneassigntaskbyclientname);
-	package.add("crosszoneassigntaskbyclientname", (void(*)(const char*, uint32, bool))&Perl__crosszoneassigntaskbyclientname);
 	package.add("crosszonecastspellbycharid", &Perl__crosszonecastspellbycharid);
 	package.add("crosszonecastspellbygroupid", &Perl__crosszonecastspellbygroupid);
 	package.add("crosszonecastspellbyraidid", &Perl__crosszonecastspellbyraidid);
 	package.add("crosszonecastspellbyguildid", &Perl__crosszonecastspellbyguildid);
-	package.add("crosszonecastspellbyexpeditionid", &Perl__crosszonecastspellbyexpeditionid);
 	package.add("crosszonecastspellbyclientname", &Perl__crosszonecastspellbyclientname);
 	package.add("crosszonedialoguewindowbycharid", &Perl__crosszonedialoguewindowbycharid);
 	package.add("crosszonedialoguewindowbygroupid", &Perl__crosszonedialoguewindowbygroupid);
 	package.add("crosszonedialoguewindowbyraidid", &Perl__crosszonedialoguewindowbyraidid);
 	package.add("crosszonedialoguewindowbyguildid", &Perl__crosszonedialoguewindowbyguildid);
-	package.add("crosszonedialoguewindowbyexpeditionid", &Perl__crosszonedialoguewindowbyexpeditionid);
 	package.add("crosszonedialoguewindowbyclientname", &Perl__crosszonedialoguewindowbyclientname);
-	package.add("crosszonedisabletaskbycharid", &Perl__crosszonedisabletaskbycharid);
-	package.add("crosszonedisabletaskbygroupid", &Perl__crosszonedisabletaskbygroupid);
-	package.add("crosszonedisabletaskbyraidid", &Perl__crosszonedisabletaskbyraidid);
-	package.add("crosszonedisabletaskbyguildid", &Perl__crosszonedisabletaskbyguildid);
-	package.add("crosszonedisabletaskbyexpeditionid", &Perl__crosszonedisabletaskbyexpeditionid);
-	package.add("crosszonedisabletaskbyclientname", &Perl__crosszonedisabletaskbyclientname);
-	package.add("crosszoneenabletaskbycharid", &Perl__crosszoneenabletaskbycharid);
-	package.add("crosszoneenabletaskbygroupid", &Perl__crosszoneenabletaskbygroupid);
-	package.add("crosszoneenabletaskbyraidid", &Perl__crosszoneenabletaskbyraidid);
-	package.add("crosszoneenabletaskbyguildid", &Perl__crosszoneenabletaskbyguildid);
-	package.add("crosszoneenabletaskbyexpeditionid", &Perl__crosszoneenabletaskbyexpeditionid);
-	package.add("crosszoneenabletaskbyclientname", &Perl__crosszoneenabletaskbyclientname);
-	package.add("crosszonefailtaskbycharid", &Perl__crosszonefailtaskbycharid);
-	package.add("crosszonefailtaskbygroupid", &Perl__crosszonefailtaskbygroupid);
-	package.add("crosszonefailtaskbyraidid", &Perl__crosszonefailtaskbyraidid);
-	package.add("crosszonefailtaskbyguildid", &Perl__crosszonefailtaskbyguildid);
-	package.add("crosszonefailtaskbyexpeditionid", &Perl__crosszonefailtaskbyexpeditionid);
-	package.add("crosszonefailtaskbyclientname", &Perl__crosszonefailtaskbyclientname);
 	package.add("crosszonemarqueebycharid", &Perl__crosszonemarqueebycharid);
 	package.add("crosszonemarqueebygroupid", &Perl__crosszonemarqueebygroupid);
 	package.add("crosszonemarqueebyraidid", &Perl__crosszonemarqueebyraidid);
 	package.add("crosszonemarqueebyguildid", &Perl__crosszonemarqueebyguildid);
-	package.add("crosszonemarqueebyexpeditionid", &Perl__crosszonemarqueebyexpeditionid);
 	package.add("crosszonemarqueebyclientname", &Perl__crosszonemarqueebyclientname);
 	package.add("crosszonemessageplayerbycharid", &Perl__crosszonemessageplayerbycharid);
 	package.add("crosszonemessageplayerbygroupid", &Perl__crosszonemessageplayerbygroupid);
 	package.add("crosszonemessageplayerbyraidid", &Perl__crosszonemessageplayerbyraidid);
 	package.add("crosszonemessageplayerbyguildid", &Perl__crosszonemessageplayerbyguildid);
-	package.add("crosszonemessageplayerbyexpeditionid", &Perl__crosszonemessageplayerbyexpeditionid);
 	package.add("crosszonemessageplayerbyname", &Perl__crosszonemessageplayerbyname);
 	package.add("crosszonemoveplayerbycharid", &Perl__crosszonemoveplayerbycharid);
 	package.add("crosszonemoveplayerbygroupid", &Perl__crosszonemoveplayerbygroupid);
 	package.add("crosszonemoveplayerbyraidid", &Perl__crosszonemoveplayerbyraidid);
 	package.add("crosszonemoveplayerbyguildid", &Perl__crosszonemoveplayerbyguildid);
-	package.add("crosszonemoveplayerbyexpeditionid", &Perl__crosszonemoveplayerbyexpeditionid);
 	package.add("crosszonemoveplayerbyname", &Perl__crosszonemoveplayerbyname);
-	package.add("crosszonemoveinstancebycharid", &Perl__crosszonemoveinstancebycharid);
-	package.add("crosszonemoveinstancebygroupid", &Perl__crosszonemoveinstancebygroupid);
-	package.add("crosszonemoveinstancebyraidid", &Perl__crosszonemoveinstancebyraidid);
-	package.add("crosszonemoveinstancebyguildid", &Perl__crosszonemoveinstancebyguildid);
-	package.add("crosszonemoveinstancebyexpeditionid", &Perl__crosszonemoveinstancebyexpeditionid);
-	package.add("crosszonemoveinstancebyclientname", &Perl__crosszonemoveinstancebyclientname);
-	package.add("crosszoneremoveldonlossbycharid", &Perl__crosszoneremoveldonlossbycharid);
-	package.add("crosszoneremoveldonlossbygroupid", &Perl__crosszoneremoveldonlossbygroupid);
-	package.add("crosszoneremoveldonlossbyraidid", &Perl__crosszoneremoveldonlossbyraidid);
-	package.add("crosszoneremoveldonlossbyguildid", &Perl__crosszoneremoveldonlossbyguildid);
-	package.add("crosszoneremoveldonlossbyexpeditionid", &Perl__crosszoneremoveldonlossbyexpeditionid);
-	package.add("crosszoneremoveldonlossbyclientname", &Perl__crosszoneremoveldonlossbyclientname);
-	package.add("crosszoneremoveldonwinbycharid", &Perl__crosszoneremoveldonwinbycharid);
-	package.add("crosszoneremoveldonwinbygroupid", &Perl__crosszoneremoveldonwinbygroupid);
-	package.add("crosszoneremoveldonwinbyraidid", &Perl__crosszoneremoveldonwinbyraidid);
-	package.add("crosszoneremoveldonwinbyguildid", &Perl__crosszoneremoveldonwinbyguildid);
-	package.add("crosszoneremoveldonwinbyexpeditionid", &Perl__crosszoneremoveldonwinbyexpeditionid);
-	package.add("crosszoneremoveldonwinbyclientname", &Perl__crosszoneremoveldonwinbyclientname);
 	package.add("crosszoneremovespellbycharid", &Perl__crosszoneremovespellbycharid);
 	package.add("crosszoneremovespellbygroupid", &Perl__crosszoneremovespellbygroupid);
 	package.add("crosszoneremovespellbyraidid", &Perl__crosszoneremovespellbyraidid);
 	package.add("crosszoneremovespellbyguildid", &Perl__crosszoneremovespellbyguildid);
-	package.add("crosszoneremovespellbyexpeditionid", &Perl__crosszoneremovespellbyexpeditionid);
 	package.add("crosszoneremovespellbyclientname", &Perl__crosszoneremovespellbyclientname);
-	package.add("crosszoneremovetaskbycharid", &Perl__crosszoneremovetaskbycharid);
-	package.add("crosszoneremovetaskbygroupid", &Perl__crosszoneremovetaskbygroupid);
-	package.add("crosszoneremovetaskbyraidid", &Perl__crosszoneremovetaskbyraidid);
-	package.add("crosszoneremovetaskbyguildid", &Perl__crosszoneremovetaskbyguildid);
-	package.add("crosszoneremovetaskbyexpeditionid", &Perl__crosszoneremovetaskbyexpeditionid);
-	package.add("crosszoneremovetaskbyclientname", &Perl__crosszoneremovetaskbyclientname);
-	package.add("crosszoneresetactivitybycharid", &Perl__crosszoneresetactivitybycharid);
-	package.add("crosszoneresetactivitybygroupid", &Perl__crosszoneresetactivitybygroupid);
-	package.add("crosszoneresetactivitybyraidid", &Perl__crosszoneresetactivitybyraidid);
-	package.add("crosszoneresetactivitybyguildid", &Perl__crosszoneresetactivitybyguildid);
-	package.add("crosszoneresetactivitybyexpeditionid", &Perl__crosszoneresetactivitybyexpeditionid);
-	package.add("crosszoneresetactivitybyclientname", &Perl__crosszoneresetactivitybyclientname);
 	package.add("crosszonesetentityvariablebycharid", &Perl__crosszonesetentityvariablebycharid);
 	package.add("crosszonesetentityvariablebygroupid", &Perl__crosszonesetentityvariablebygroupid);
 	package.add("crosszonesetentityvariablebyraidid", &Perl__crosszonesetentityvariablebyraidid);
 	package.add("crosszonesetentityvariablebyguildid", &Perl__crosszonesetentityvariablebyguildid);
-	package.add("crosszonesetentityvariablebyexpeditionid", &Perl__crosszonesetentityvariablebyexpeditionid);
 	package.add("crosszonesetentityvariablebyclientname", &Perl__crosszonesetentityvariablebyclientname);
 	package.add("crosszonesetentityvariablebynpctypeid", &Perl__crosszonesetentityvariablebynpctypeid);
 	package.add("crosszonesignalclientbycharid", &Perl__crosszonesignalclientbycharid);
 	package.add("crosszonesignalclientbygroupid", &Perl__crosszonesignalclientbygroupid);
 	package.add("crosszonesignalclientbyraidid", &Perl__crosszonesignalclientbyraidid);
 	package.add("crosszonesignalclientbyguildid", &Perl__crosszonesignalclientbyguildid);
-	package.add("crosszonesignalclientbyexpeditionid", &Perl__crosszonesignalclientbyexpeditionid);
 	package.add("crosszonesignalclientbyname", &Perl__crosszonesignalclientbyname);
 	package.add("crosszonesignalnpcbynpctypeid", &Perl__crosszonesignalnpcbynpctypeid);
-	package.add("crosszoneupdateactivitybycharid", (void(*)(int, uint32, int))&Perl__crosszoneupdateactivitybycharid);
-	package.add("crosszoneupdateactivitybycharid", (void(*)(int, uint32, int, int))&Perl__crosszoneupdateactivitybycharid);
-	package.add("crosszoneupdateactivitybygroupid", (void(*)(int, uint32, int))&Perl__crosszoneupdateactivitybygroupid);
-	package.add("crosszoneupdateactivitybygroupid", (void(*)(int, uint32, int, int))&Perl__crosszoneupdateactivitybygroupid);
-	package.add("crosszoneupdateactivitybyraidid", (void(*)(int, uint32, int))&Perl__crosszoneupdateactivitybyraidid);
-	package.add("crosszoneupdateactivitybyraidid", (void(*)(int, uint32, int, int))&Perl__crosszoneupdateactivitybyraidid);
-	package.add("crosszoneupdateactivitybyguildid", (void(*)(int, uint32, int))&Perl__crosszoneupdateactivitybyguildid);
-	package.add("crosszoneupdateactivitybyguildid", (void(*)(int, uint32, int, int))&Perl__crosszoneupdateactivitybyguildid);
-	package.add("crosszoneupdateactivitybyexpeditionid", (void(*)(uint32, uint32, int))&Perl__crosszoneupdateactivitybyexpeditionid);
-	package.add("crosszoneupdateactivitybyexpeditionid", (void(*)(uint32, uint32, int, int))&Perl__crosszoneupdateactivitybyexpeditionid);
-	package.add("crosszoneupdateactivitybyclientname", (void(*)(const char*, uint32, int))&Perl__crosszoneupdateactivitybyclientname);
-	package.add("crosszoneupdateactivitybyclientname", (void(*)(const char*, uint32, int, int))&Perl__crosszoneupdateactivitybyclientname);
-	package.add("worldwideaddldonloss", (void(*)(uint32))&Perl__worldwideaddldonloss);
-	package.add("worldwideaddldonloss", (void(*)(uint32, uint8))&Perl__worldwideaddldonloss);
-	package.add("worldwideaddldonloss", (void(*)(uint32, uint8, uint8))&Perl__worldwideaddldonloss);
-	package.add("worldwideaddldonpoints", (void(*)(uint32))&Perl__worldwideaddldonpoints);
-	package.add("worldwideaddldonpoints", (void(*)(uint32, int))&Perl__worldwideaddldonpoints);
-	package.add("worldwideaddldonpoints", (void(*)(uint32, int, uint8))&Perl__worldwideaddldonpoints);
-	package.add("worldwideaddldonpoints", (void(*)(uint32, int, uint8, uint8))&Perl__worldwideaddldonpoints);
-	package.add("worldwideaddldonwin", (void(*)(uint32))&Perl__worldwideaddldonwin);
-	package.add("worldwideaddldonwin", (void(*)(uint32, uint8))&Perl__worldwideaddldonwin);
-	package.add("worldwideaddldonwin", (void(*)(uint32, uint8, uint8))&Perl__worldwideaddldonwin);
-	package.add("worldwideassigntask", (void(*)(uint32))&Perl__worldwideassigntask);
-	package.add("worldwideassigntask", (void(*)(uint32, bool))&Perl__worldwideassigntask);
-	package.add("worldwideassigntask", (void(*)(uint32, bool, uint8))&Perl__worldwideassigntask);
-	package.add("worldwideassigntask", (void(*)(uint32, bool, uint8, uint8))&Perl__worldwideassigntask);
 	package.add("worldwidecastspell", (void(*)(uint32))&Perl__worldwidecastspell);
 	package.add("worldwidecastspell", (void(*)(uint32, uint8))&Perl__worldwidecastspell);
 	package.add("worldwidecastspell", (void(*)(uint32, uint8, uint8 max_status))&Perl__worldwidecastspell);
 	package.add("worldwidedialoguewindow", (void(*)(const char*))&Perl__worldwidedialoguewindow);
 	package.add("worldwidedialoguewindow", (void(*)(const char*, uint8))&Perl__worldwidedialoguewindow);
 	package.add("worldwidedialoguewindow", (void(*)(const char*, uint8, uint8))&Perl__worldwidedialoguewindow);
-	package.add("worldwidedisabletask", (void(*)(uint32))&Perl__worldwidedisabletask);
-	package.add("worldwidedisabletask", (void(*)(uint32, uint8))&Perl__worldwidedisabletask);
-	package.add("worldwidedisabletask", (void(*)(uint32, uint8, uint8))&Perl__worldwidedisabletask);
-	package.add("worldwideenabletask", (void(*)(uint32))&Perl__worldwideenabletask);
-	package.add("worldwideenabletask", (void(*)(uint32, uint8))&Perl__worldwideenabletask);
-	package.add("worldwideenabletask", (void(*)(uint32, uint8, uint8))&Perl__worldwideenabletask);
-	package.add("worldwidefailtask", (void(*)(uint32))&Perl__worldwidefailtask);
-	package.add("worldwidefailtask", (void(*)(uint32, uint8))&Perl__worldwidefailtask);
-	package.add("worldwidefailtask", (void(*)(uint32, uint8, uint8))&Perl__worldwidefailtask);
 	package.add("worldwidemarquee", (void(*)(uint32, uint32, uint32, uint32, uint32, const char*))&Perl__worldwidemarquee);
 	package.add("worldwidemarquee", (void(*)(uint32, uint32, uint32, uint32, uint32, const char*, uint8))&Perl__worldwidemarquee);
 	package.add("worldwidemarquee", (void(*)(uint32, uint32, uint32, uint32, uint32, const char*, uint8, uint8))&Perl__worldwidemarquee);
@@ -4141,24 +2580,9 @@ void perl_register_quest()
 	package.add("worldwidemove", (void(*)(const char*))&Perl__worldwidemove);
 	package.add("worldwidemove", (void(*)(const char*, uint8))&Perl__worldwidemove);
 	package.add("worldwidemove", (void(*)(const char*, uint8, uint8))&Perl__worldwidemove);
-	package.add("worldwidemoveinstance", (void(*)(uint16))&Perl__worldwidemoveinstance);
-	package.add("worldwidemoveinstance", (void(*)(uint16, uint8))&Perl__worldwidemoveinstance);
-	package.add("worldwidemoveinstance", (void(*)(uint16, uint8, uint8))&Perl__worldwidemoveinstance);
-	package.add("worldwideremoveldonloss", (void(*)(uint32))&Perl__worldwideremoveldonloss);
-	package.add("worldwideremoveldonloss", (void(*)(uint32, uint8))&Perl__worldwideremoveldonloss);
-	package.add("worldwideremoveldonloss", (void(*)(uint32, uint8, uint8))&Perl__worldwideremoveldonloss);
-	package.add("worldwideremoveldonwin", (void(*)(uint32))&Perl__worldwideremoveldonwin);
-	package.add("worldwideremoveldonwin", (void(*)(uint32, uint8))&Perl__worldwideremoveldonwin);
-	package.add("worldwideremoveldonwin", (void(*)(uint32, uint8, uint8))&Perl__worldwideremoveldonwin);
 	package.add("worldwideremovespell", (void(*)(uint32))&Perl__worldwideremovespell);
 	package.add("worldwideremovespell", (void(*)(uint32, uint8))&Perl__worldwideremovespell);
 	package.add("worldwideremovespell", (void(*)(uint32, uint8, uint8))&Perl__worldwideremovespell);
-	package.add("worldwideremovetask", (void(*)(uint32))&Perl__worldwideremovetask);
-	package.add("worldwideremovetask", (void(*)(uint32, uint8, uint8))&Perl__worldwideremovetask);
-	package.add("worldwideremovetask", (void(*)(uint32, uint8, uint8))&Perl__worldwideremovetask);
-	package.add("worldwideresetactivity", (void(*)(uint32, int))&Perl__worldwideresetactivity);
-	package.add("worldwideresetactivity", (void(*)(uint32, int, uint8))&Perl__worldwideresetactivity);
-	package.add("worldwideresetactivity", (void(*)(uint32, int, uint8, uint8))&Perl__worldwideresetactivity);
 	package.add("worldwidesetentityvariableclient", (void(*)(const char*, const char*))&Perl__worldwidesetentityvariableclient);
 	package.add("worldwidesetentityvariableclient", (void(*)(const char*, const char*, uint8))&Perl__worldwidesetentityvariableclient);
 	package.add("worldwidesetentityvariableclient", (void(*)(const char*, const char*, uint8, uint8))&Perl__worldwidesetentityvariableclient);
@@ -4167,10 +2591,6 @@ void perl_register_quest()
 	package.add("worldwidesignalclient", (void(*)(int, uint8))&Perl__worldwidesignalclient);
 	package.add("worldwidesignalclient", (void(*)(int, uint8, uint8))&Perl__worldwidesignalclient);
 	package.add("worldwidesignalnpc", &Perl__worldwidesignalnpc);
-	package.add("worldwideupdateactivity", (void(*)(uint32, int))&Perl__worldwideupdateactivity);
-	package.add("worldwideupdateactivity", (void(*)(uint32, int, int))&Perl__worldwideupdateactivity);
-	package.add("worldwideupdateactivity", (void(*)(uint32, int, int, uint8))&Perl__worldwideupdateactivity);
-	package.add("worldwideupdateactivity", (void(*)(uint32, int, int, uint8, uint8))&Perl__worldwideupdateactivity);
 	package.add("debug", (void(*)(const char*))&Perl__debug);
 	package.add("debug", (void(*)(const char*, int))&Perl__debug);
 	package.add("delglobal", &Perl__delglobal);
@@ -4185,25 +2605,18 @@ void perl_register_quest()
 	package.add("disable_proximity_say", &Perl__disable_proximity_say);
 	package.add("disable_spawn2", &Perl__disable_spawn2);
 	package.add("disablerecipe", &Perl__disablerecipe);
-	package.add("disabletask", &Perl__disabletask);
 	package.add("discordsend", &Perl__discordsend);
 	package.add("doanim", &Perl__doanim);
 	package.add("echo", &Perl__echo);
 	package.add("emote", &Perl__emote);
 	package.add("enable_proximity_say", &Perl__enable_proximity_say);
 	package.add("enable_spawn2", &Perl__enable_spawn2);
-	package.add("enabledtaskcount", &Perl__enabledtaskcount);
 	package.add("enablerecipe", &Perl__enablerecipe);
-	package.add("enabletask", &Perl__enabletask);
 	package.add("enabletitle", &Perl__enabletitle);
-	package.add("end_dz_task", (void(*)())&Perl__end_dz_task);
-	package.add("end_dz_task", (void(*)(bool))&Perl__end_dz_task);
 	package.add("exp", &Perl__exp);
 	package.add("faction", (void(*)(int, int))&Perl__faction);
 	package.add("faction", (void(*)(int, int, int))&Perl__faction);
 	package.add("factionvalue", &Perl__FactionValue);
-	package.add("failtask", &Perl__failtask);
-	package.add("firsttaskinset", &Perl__firsttaskinset);
 	package.add("follow", (void(*)(int))&Perl__follow);
 	package.add("follow", (void(*)(int, int))&Perl__follow);
 	package.add("forcedoorclose", (void(*)(uint32))&Perl__forcedoorclose);
@@ -4221,23 +2634,14 @@ void perl_register_quest()
 	package.add("getconsiderlevelname", &Perl__getconsiderlevelname);
 	package.add("gethexcolorcode", &Perl__gethexcolorcode);
 	package.add("getcurrencyid", &Perl__getcurrencyid);
-	package.add("get_dz_task_id", &Perl__get_dz_task_id);
 	package.add("getexpmodifierbycharid", (double(*)(uint32, uint32))&Perl__getexpmodifierbycharid);
 	package.add("getexpmodifierbycharid", (double(*)(uint32, uint32, int16))&Perl__getexpmodifierbycharid);
-	package.add("get_expedition", &Perl__get_expedition);
-	package.add("get_expedition_by_char_id", &Perl__get_expedition_by_char_id);
-	package.add("get_expedition_by_dz_id", &Perl__get_expedition_by_dz_id);
-	package.add("get_expedition_by_zone_instance", &Perl__get_expedition_by_zone_instance);
-	package.add("get_expedition_lockout_by_char_id", &Perl__get_expedition_lockout_by_char_id);
-	package.add("get_expedition_lockouts_by_char_id", (perl::reference(*)(uint32))&Perl__get_expedition_lockouts_by_char_id);
-	package.add("get_expedition_lockouts_by_char_id", (perl::reference(*)(uint32, std::string))&Perl__get_expedition_lockouts_by_char_id);
 	package.add("getfactionname", &Perl__getfactionname);
 	package.add("getinventoryslotid", &Perl__getinventoryslotid);
 	package.add("getitemname", &Perl__getitemname);
 	package.add("getItemName", &Perl__qc_getItemName);
 	package.add("getitemstat", &Perl__getitemstat);
 	package.add("getlanguagename", &Perl__getlanguagename);
-	package.add("getldonthemename", &Perl__getldonthemename);
 	package.add("getnpcnamebyid", &Perl__getnpcnamebyid);
 	package.add("get_spawn_condition", (int(*)(const char*, uint16))&Perl__get_spawn_condition);
 	package.add("get_spawn_condition", (int(*)(const char*, uint32, uint16))&Perl__get_spawn_condition);
@@ -4265,8 +2669,6 @@ void perl_register_quest()
 	package.add("getplayercorpsecountbyzoneid", &Perl__getplayercorpsecountbyzoneid);
 	package.add("getrecipemadecount", &Perl__getrecipemadecount);
 	package.add("getrecipename", &Perl__getrecipename);
-	package.add("gettaskactivitydonecount", &Perl__gettaskactivitydonecount);
-	package.add("gettaskname", &Perl__gettaskname);
 	package.add("gettimerdurationMS", &Perl__gettimerdurationMS);
 	package.add("givecash", (void(*)(uint32))&Perl__givecash);
 	package.add("givecash", (void(*)(uint32, uint32))&Perl__givecash);
@@ -4285,13 +2687,7 @@ void perl_register_quest()
 	package.add("isdisctome", &Perl__isdisctome);
 	package.add("isdooropen", &Perl__isdooropen);
 	package.add("isnpcspawned", &Perl__isnpcspawned);
-	package.add("istaskactive", &Perl__istaskactive);
-	package.add("istaskactivityactive", &Perl__istaskactivityactive);
-	package.add("istaskappropriate", &Perl__istaskappropriate);
-	package.add("istaskcompleted", &Perl__istaskcompleted);
-	package.add("istaskenabled", &Perl__istaskenabled);
 	package.add("itemlink", &Perl__itemlink);
-	package.add("lasttaskinset", &Perl__lasttaskinset);
 	package.add("level", &Perl__level);
 	package.add("log", &Perl__log);
 	package.add("log_combat", &Perl__log_combat);
@@ -4307,7 +2703,6 @@ void perl_register_quest()
 	package.add("moveto", (void(*)(float, float, float))&Perl__moveto);
 	package.add("moveto", (void(*)(float, float, float, float))&Perl__moveto);
 	package.add("moveto", (void(*)(float, float, float, float, bool))&Perl__moveto);
-	package.add("nexttaskinset", &Perl__nexttaskinset);
 	package.add("npcfeature", &Perl__npcfeature);
 	package.add("npcgender", &Perl__npcgender);
 	package.add("npcrace", &Perl__npcrace);
@@ -4346,15 +2741,11 @@ void perl_register_quest()
 	package.add("rebind", (void(*)(int, float, float, float))&Perl__rebind);
 	package.add("rebind", (void(*)(int, float, float, float, float))&Perl__rebind);
 	package.add("reloadzonestaticdata", &Perl__reloadzonestaticdata);
-	package.add("remove_all_expedition_lockouts_by_char_id", (void(*)(uint32))&Perl__remove_all_expedition_lockouts_by_char_id);
-	package.add("remove_all_expedition_lockouts_by_char_id", (void(*)(uint32, std::string))&Perl__remove_all_expedition_lockouts_by_char_id);
-	package.add("remove_expedition_lockout_by_char_id", &Perl__remove_expedition_lockout_by_char_id);
 	package.add("removeitem", (void(*)(uint32_t))&Perl__removeitem);
 	package.add("removeitem", (void(*)(uint32_t, int))&Perl__removeitem);
 	package.add("removetitle", &Perl__removetitle);
 	package.add("rename", &Perl__rename);
 	package.add("repopzone", &Perl__repopzone);
-	package.add("resettaskactivity", &Perl__resettaskactivity);
 	package.add("respawn", &Perl__respawn);
 	package.add("resume", &Perl__resume);
 	package.add("rewardfaction", &Perl__rewardfaction);
@@ -4420,11 +2811,6 @@ void perl_register_quest()
 	package.add("summonitem", (void(*)(int, int))&Perl__summonitem);
 	package.add("surname", &Perl__surname);
 	package.add("targlobal", &Perl__targlobal);
-	package.add("taskselector", &Perl__taskselector);
-	package.add("taskselector_nocooldown", &Perl__taskselector_nocooldown);
-	package.add("task_setselector", (void(*)(int))&Perl__task_setselector);
-	package.add("task_setselector", (void(*)(int, bool))&Perl__task_setselector);
-	package.add("tasktimeleft", &Perl__tasktimeleft);
 	package.add("toggle_spawn_event", &Perl__toggle_spawn_event);
 	package.add("toggledoorstate", &Perl__toggledoorstate);
 	package.add("tracknpc", &Perl__tracknpc);
@@ -4436,9 +2822,6 @@ void perl_register_quest()
 	package.add("unscribespells", &Perl__unscribespells);
 	package.add("untraindiscs", &Perl__untraindiscs);
 	package.add("updatespawntimer", &Perl__UpdateSpawnTimer);
-	package.add("updatetaskactivity", (void(*)(int, int))&Perl__updatetaskactivity);
-	package.add("updatetaskactivity", (void(*)(int, int, int))&Perl__updatetaskactivity);
-	package.add("updatetaskactivity", (void(*)(int, int, int, bool))&Perl__updatetaskactivity);
 	package.add("UpdateZoneHeader", &Perl__UpdateZoneHeader);
 	package.add("varlink", &Perl__varlink);
 	package.add("voicetell", &Perl__voicetell);

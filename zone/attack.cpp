@@ -2060,7 +2060,7 @@ bool Client::Death(Mob* killerMob, int64 damage, uint16 spell, EQ::skills::Skill
 	if (RuleB(QueryServ, PlayerLogDeaths)) {
 		const char * killer_name = "";
 		if (killerMob && killerMob->GetCleanName()) { killer_name = killerMob->GetCleanName(); }
-		std::string event_desc = StringFormat("Died in zoneid:%i instid:%i by '%s', spellid:%i, damage:%i", GetZoneID(), GetInstanceID(), killer_name, spell, damage);
+		std::string event_desc = StringFormat("Died in zoneid:%i by '%s', spellid:%i, damage:%i", GetZoneID(), killer_name, spell, damage);
 		QServ->PlayerLogEvent(Player_Log_Deaths, CharacterID(), event_desc);
 	}
 
@@ -2312,25 +2312,6 @@ void NPC::Damage(Mob* other, int64 damage, uint16 spell_id, EQ::skills::SkillTyp
 	if (!IsEngaged())
 		zone->AddAggroMob();
 
-	if (GetClass() == LDON_TREASURE)
-	{
-		if (IsLDoNLocked() && GetLDoNLockedSkill() != LDoNTypeMechanical)
-		{
-			damage = -5;
-		}
-		else
-		{
-			if (IsLDoNTrapped())
-			{
-				MessageString(Chat::Red, LDON_ACCIDENT_SETOFF2);
-				SpellFinished(GetLDoNTrapSpellID(), other, EQ::spells::CastingSlot::Item, 0, -1, spells[GetLDoNTrapSpellID()].resist_difficulty, false);
-				SetLDoNTrapSpellID(0);
-				SetLDoNTrapped(false);
-				SetLDoNTrapDetected(false);
-			}
-		}
-	}
-
 	//do a majority of the work...
 	CommonDamage(other, damage, spell_id, attack_skill, avoidable, buffslot, iBuffTic, special);
 
@@ -2491,7 +2472,6 @@ bool NPC::Death(Mob* killer_mob, int64 damage, uint16 spell, EQ::skills::SkillTy
 	if (!IsCharmed() && give_exp_client && !RuleB(NPC, EnableMeritBasedFaction))
 		hate_list.DoFactionHits(GetNPCFactionID(), GetPrimaryFaction(), GetFactionAmount());
 
-	bool IsLdonTreasure = (GetClass() == LDON_TREASURE);
 
 	if (give_exp_client && !IsCorpse()) {
 		Group *kg = entity_list.GetGroupByClient(give_exp_client);
@@ -2500,18 +2480,8 @@ bool NPC::Death(Mob* killer_mob, int64 damage, uint16 spell, EQ::skills::SkillTy
 		int32 finalxp = give_exp_client->GetExperienceForKill(this);
 		finalxp = give_exp_client->mod_client_xp(finalxp, this);
 
-		// handle task credit on behalf of the killer
-		if (RuleB(TaskSystem, EnableTaskSystem)) {
-			LogTasksDetail(
-				"[NPC::Death] Triggering HandleUpdateTasksOnKill for [{}] npc [{}]",
-				give_exp_client->GetCleanName(),
-				GetNPCTypeID()
-			);
-			task_manager->HandleUpdateTasksOnKill(give_exp_client, this);
-		}
-
 		if (kr) {
-			if (!IsLdonTreasure && MerchantType == 0) {
+			if ( MerchantType == 0) {
 				kr->SplitExp((finalxp), this);
 				if (killer_mob && (kr->IsRaidMember(killer_mob->GetName()) || kr->IsRaidMember(killer_mob->GetUltimateOwner()->GetName())))
 					killer_mob->TrySpellOnKill(killed_level, spell);
@@ -2557,7 +2527,7 @@ bool NPC::Death(Mob* killer_mob, int64 damage, uint16 spell, EQ::skills::SkillTy
 
 		}
 		else if (give_exp_client->IsGrouped() && kg != nullptr) {
-			if (!IsLdonTreasure && MerchantType == 0) {
+			if ( MerchantType == 0) {
 				kg->SplitExp((finalxp), this);
 				if (killer_mob && (kg->IsGroupMember(killer_mob->GetName()) || kg->IsGroupMember(killer_mob->GetUltimateOwner()->GetName())))
 					killer_mob->TrySpellOnKill(killed_level, spell);
@@ -2603,7 +2573,7 @@ bool NPC::Death(Mob* killer_mob, int64 damage, uint16 spell, EQ::skills::SkillTy
 			// End QueryServ Logging
 		}
 		else {
-			if (!IsLdonTreasure && MerchantType == 0) {
+			if ( MerchantType == 0) {
 				int conlevel = give_exp->GetLevelCon(GetLevel());
 				if (conlevel != CON_GRAY) {
 					if (!GetOwner() || (GetOwner() && !GetOwner()->IsClient())) {
@@ -2650,7 +2620,7 @@ bool NPC::Death(Mob* killer_mob, int64 damage, uint16 spell, EQ::skills::SkillTy
 	if (!HasOwner() && !IsMerc() && !GetSwarmInfo() && (!is_merchant || allow_merchant_corpse) &&
 		((killer && (killer->IsClient() || (killer->HasOwner() && killer->GetUltimateOwner()->IsClient()) ||
 		(killer->IsNPC() && killer->CastToNPC()->GetSwarmInfo() && killer->CastToNPC()->GetSwarmInfo()->GetOwner() && killer->CastToNPC()->GetSwarmInfo()->GetOwner()->IsClient())))
-		|| (killer_mob && IsLdonTreasure)))
+		))
 	{
 		if (killer != 0) {
 			if (killer->GetOwner() != 0 && killer->GetOwner()->IsClient())
@@ -2731,26 +2701,7 @@ bool NPC::Death(Mob* killer_mob, int64 damage, uint16 spell, EQ::skills::SkillTy
 				}
 			}
 		}
-		else if (killer_mob && IsLdonTreasure) {
-			auto u_owner = killer_mob->GetUltimateOwner();
-			if (u_owner->IsClient())
-				corpse->AllowPlayerLoot(u_owner, 0);
-		}
 
-		if (zone && zone->adv_data) {
-			ServerZoneAdventureDataReply_Struct *sr = (ServerZoneAdventureDataReply_Struct*)zone->adv_data;
-			if (sr->type == Adventure_Kill) {
-				zone->DoAdventureCountIncrease();
-			}
-			else if (sr->type == Adventure_Assassinate) {
-				if (sr->data_id == GetNPCTypeID()) {
-					zone->DoAdventureCountIncrease();
-				}
-				else {
-					zone->DoAdventureAssassinationCountIncrease();
-				}
-			}
-		}
 	}
 	else {
 		entity_list.RemoveFromXTargets(this);

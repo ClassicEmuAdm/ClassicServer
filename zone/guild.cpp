@@ -224,8 +224,6 @@ void Client::RefreshGuildInfo()
 	guildrank = GUILD_RANK_NONE;
 	guild_id = GUILD_NONE;
 
-	bool WasBanker = GuildBanker;
-
 	CharGuildInfo info;
 	if(!guild_mgr.GetCharInfo(CharacterID(), info)) {
 		LogGuilds("Unable to obtain guild char info for [{}] ([{}])", GetName(), CharacterID());
@@ -234,34 +232,6 @@ void Client::RefreshGuildInfo()
 
 	guildrank = info.rank;
 	guild_id = info.guild_id;
-	GuildBanker = info.banker || guild_mgr.IsGuildLeader(GuildID(), CharacterID());
-
-	if(((int)zone->GetZoneID() == RuleI(World, GuildBankZoneID)))
-	{
-		if(WasBanker != GuildBanker)
-		{
-			auto outapp = new EQApplicationPacket(OP_SetGuildRank, sizeof(GuildSetRank_Struct));
-
-			GuildSetRank_Struct *gsrs = (GuildSetRank_Struct*)outapp->pBuffer;
-
-			gsrs->Rank = guildrank;
-			strn0cpy(gsrs->MemberName, GetName(), sizeof(gsrs->MemberName));
-			gsrs->Banker = GuildBanker;
-
-			FastQueuePacket(&outapp);
-		}
-
-		if((guild_id != OldGuildID) && GuildBanks)
-		{
-			// Unsure about this for RoF+ ... But they don't have that action anymore so fuck it
-			if (ClientVersion() < EQ::versions::ClientVersion::RoF)
-				ClearGuildBank();
-
-			if(guild_id != GUILD_NONE)
-				GuildBanks->SendGuildBank(this);
-		}
-	}
-
 	SendGuildSpawnAppearance();
 }
 

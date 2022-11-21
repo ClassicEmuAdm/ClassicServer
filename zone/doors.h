@@ -25,7 +25,6 @@ public:
 	char *GetDoorName() { return m_door_name; }
 	const glm::vec4 GetDestination() const { return m_destination; }
 	const glm::vec4 &GetPosition() const { return m_position; }
-	int GetDzSwitchID() const { return m_dz_switch_id; }
 	int GetIncline() { return m_incline; }
 	int GetInvertState() { return m_invert_state; }
 	uint8 GetDoorID() { return m_door_id; }
@@ -33,7 +32,6 @@ public:
 	uint8 GetOpenType() { return m_open_type; }
 	uint8 GetTriggerDoorID() { return m_trigger_door; }
 	uint8 GetTriggerType() { return m_trigger_type; }
-	uint8 IsLDoNDoor() { return m_is_ldon_door; }
 	uint16 GetLockpick() { return m_lockpick; }
 	uint16 GetSize() { return m_size; }
 	uint32 GetClientVersionMask() { return m_client_version_mask; }
@@ -89,10 +87,7 @@ private:
 	bool      m_is_open;
 	Timer     m_close_timer;
 	char      m_destination_zone_name[16];
-	int       m_destination_instance_id;
 	glm::vec4 m_destination;
-	uint8     m_is_ldon_door;
-	int       m_dz_switch_id = 0;
 	uint32    m_client_version_mask;
 };
 #endif

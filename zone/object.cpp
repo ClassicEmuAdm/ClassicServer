@@ -703,17 +703,16 @@ void ZoneDatabase::UpdateObject(uint32 id, uint32 type, uint32 icon, const Objec
 }
 
 //
-Ground_Spawns* ZoneDatabase::LoadGroundSpawns(uint32 zone_id, int16 version, Ground_Spawns* gs) {
+Ground_Spawns* ZoneDatabase::LoadGroundSpawns(uint32 zone_id, Ground_Spawns* gs) {
 
 	std::string query = StringFormat(
 		"SELECT max_x, max_y, max_z, "
 		"min_x, min_y, heading, name, "
 		"item, max_allowed, respawn_timer "
 		"FROM ground_spawns "
-		"WHERE zoneid = %i AND (version = %u OR version = -1) %s "
+		"WHERE zoneid = %i %s "
 		"LIMIT 50",
 		zone_id,
-		version,
 		ContentFilterCriteria::apply().c_str()
 	);
 

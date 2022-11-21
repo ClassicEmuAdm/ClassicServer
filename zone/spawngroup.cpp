@@ -159,7 +159,7 @@ bool SpawnGroupList::RemoveSpawnGroup(uint32 in_id)
 void SpawnGroupList::ReloadSpawnGroups()
 {
 	ClearSpawnGroups();
-	content_db.LoadSpawnGroups(zone->GetShortName(), zone->GetInstanceVersion(), &zone->spawn_group_list);
+	content_db.LoadSpawnGroups(zone->GetShortName(), &zone->spawn_group_list);
 }
 
 void SpawnGroupList::ClearSpawnGroups()
@@ -167,7 +167,7 @@ void SpawnGroupList::ClearSpawnGroups()
 	m_spawn_groups.clear();
 }
 
-bool ZoneDatabase::LoadSpawnGroups(const char *zone_name, uint16 version, SpawnGroupList *spawn_group_list)
+bool ZoneDatabase::LoadSpawnGroups(const char *zone_name, SpawnGroupList *spawn_group_list)
 {
 	std::string query = fmt::format(
 		SQL(
@@ -190,12 +190,9 @@ bool ZoneDatabase::LoadSpawnGroups(const char *zone_name, uint16 version, SpawnG
 			spawngroup
 				WHERE
 				spawn2.spawngroupID = spawngroup.ID
-				AND
-				(spawn2.version = {} OR version = -1)
 				AND zone = '{}'
 				{}
 		),
-		version,
 		zone_name,
 		ContentFilterCriteria::apply()
 	);

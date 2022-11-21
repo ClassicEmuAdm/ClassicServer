@@ -766,7 +766,7 @@ bool Client::HandleEnterWorldPacket(const EQApplicationPacket *app) {
 	strn0cpy(char_name, ew->name, sizeof(char_name));
 
 	uint32 temporary_account_id = 0;
-	charid = database.GetCharacterInfo(char_name, &temporary_account_id, &zone_id, &instance_id);
+	charid = database.GetCharacterInfo(char_name, &temporary_account_id, &zone_id);
 	if (!charid) {
 		LogInfo("Could not get CharInfo for [{}]", char_name);
 		eqs->Close();
@@ -855,16 +855,6 @@ bool Client::HandleEnterWorldPacket(const EQApplicationPacket *app) {
 		// This is to save people in an invalid zone, once it's removed from the DB
 		database.MoveCharacterToZone(charid, ZoneID("arena"));
 		LogInfo("Zone [{}] not found, moving [{}] to Arena.", zone_id, char_name);
-	}
-
-	if (instance_id) {
-		if (
-			!database.VerifyInstanceAlive(instance_id, GetCharID()) ||
-			!database.VerifyZoneInstance(zone_id, instance_id)
-		) {
-			zone_id = database.MoveCharacterToInstanceSafeReturn(charid, zone_id, instance_id);
-			instance_id = 0;
-		}
 	}
 
 	if(!is_player_zoning) {
@@ -1319,23 +1309,7 @@ void Client::EnterWorld(bool TryBootup) {
 		return;
 
 	ZoneServer* zone_server = nullptr;
-	if (instance_id > 0)
-	{
-		if (!database.VerifyInstanceAlive(instance_id, GetCharID()) ||
-		    !database.VerifyZoneInstance(zone_id, instance_id))
-		{
-			instance_id = 0;
-			database.MoveCharacterToInstanceSafeReturn(GetCharID(), zone_id, instance_id);
-			TellClientZoneUnavailable();
-			return;
-		}
-
-		zone_server = zoneserver_list.FindByInstanceID(instance_id);
-	}
-	else
-	{
-		zone_server = zoneserver_list.FindByZoneID(zone_id);
-	}
+	zone_server = zoneserver_list.FindByZoneID(zone_id);
 
 	const char *zone_name = ZoneName(zone_id, true);
 	if (zone_server) {
@@ -1352,9 +1326,9 @@ void Client::EnterWorld(bool TryBootup) {
 	}
 	else {
 		if (TryBootup) {
-			LogInfo("Attempting autobootup of [{}] ([{}]:[{}])", zone_name, zone_id, instance_id);
+			LogInfo("Attempting autobootup of [{}] ([{}])", zone_name, zone_id);
 			autobootup_timeout.Start();
-			zone_waiting_for_bootup = zoneserver_list.TriggerBootup(zone_id, instance_id);
+			zone_waiting_for_bootup = zoneserver_list.TriggerBootup(zone_id);
 			if (zone_waiting_for_bootup == 0) {
 				LogInfo("No zoneserver available to boot up");
 				TellClientZoneUnavailable();
@@ -1385,12 +1359,11 @@ void Client::EnterWorld(bool TryBootup) {
 	database.UpdateLiveChar(char_name, GetAccountID());
 
 	LogInfo(
-		"({}) [{}] [{}] (Zone ID [{}]: Instance ID: [{}]) ",
+		"({}) [{}] [{}] (Zone ID [{}]) ",
 		char_name,
 		(seen_character_select ? "Zoning from character select" : "Zoning to"),
 		zone_name,
-		zone_id,
-		instance_id
+		zone_id
 	);
 
 	if (seen_character_select) {
@@ -1414,14 +1387,7 @@ void Client::EnterWorld(bool TryBootup) {
 void Client::Clearance(int8 response)
 {
 	ZoneServer* zs = nullptr;
-	if(instance_id > 0)
-	{
-		zs = zoneserver_list.FindByInstanceID(instance_id);
-	}
-	else
-	{
-		zs = zoneserver_list.FindByZoneID(zone_id);
-	}
+	zs = zoneserver_list.FindByZoneID(zone_id);
 
 	if(zs == 0 || response == -1 || response == 0)
 	{
@@ -1494,7 +1460,7 @@ void Client::Clearance(int8 response)
 
 	strcpy(zsi->ip, zs_addr.c_str());
 	zsi->port =zs->GetCPort();
-	LogInfo("Sending client to zone [{}] ([{}]:[{}]) at [{}]:[{}]", zonename, zone_id, instance_id, zsi->ip, zsi->port);
+	LogInfo("Sending client to zone [{}] ([{}]) at [{}]:[{}]", zonename, zone_id, zsi->ip, zsi->port);
 	QueuePacket(outapp);
 	safe_delete(outapp);
 

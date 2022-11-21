@@ -27,7 +27,6 @@ public:
 	bool IsZoneLocked(uint16 iZoneID);
 	bool SendPacket(ServerPacket *pack);
 	bool SendPacket(uint32 zoneid, ServerPacket *pack);
-	bool SendPacket(uint32 zoneid, uint16 instanceid, ServerPacket *pack);
 	bool SetLockedZone(uint16 iZoneID, bool iLock);
 
 	EQTime worldclock;
@@ -39,7 +38,7 @@ public:
 	Timer *shutdowntimer;
 
 	uint16 GetAvailableZonePort();
-	uint32 TriggerBootup(uint32 iZoneID, uint32 iInstanceID = 0);
+	uint32 TriggerBootup(uint32 iZoneID);
 
 	void Add(ZoneServer *zoneserver);
 	void GetZoneIDList(std::vector<uint32> &zones);
@@ -63,7 +62,6 @@ public:
 
 	ZoneServer*	FindByPort(uint16 port);
 	ZoneServer* FindByID(uint32 ZoneID);
-	ZoneServer* FindByInstanceID(uint32 InstanceID);
 	ZoneServer* FindByName(const char* zonename);
 	ZoneServer* FindByZoneID(uint32 ZoneID);
 

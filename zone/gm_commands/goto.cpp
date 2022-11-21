@@ -11,7 +11,6 @@ void command_goto(Client *c, const Seperator *sep)
 	if (goto_via_target_no_args) {
 		c->MovePC(
 			zone->GetZoneID(),
-			zone->GetInstanceID(),
 			c->GetTarget()->GetX(),
 			c->GetTarget()->GetY(),
 			c->GetTarget()->GetZ(),
@@ -29,7 +28,6 @@ void command_goto(Client *c, const Seperator *sep)
 		if (client) {
 			c->MovePC(
 				zone->GetZoneID(),
-				zone->GetInstanceID(),
 				client->GetX(),
 				client->GetY(),
 				client->GetZ(),
@@ -48,7 +46,6 @@ void command_goto(Client *c, const Seperator *sep)
 	else if (goto_via_x_y_z) {
 		c->MovePC(
 			zone->GetZoneID(),
-			zone->GetInstanceID(),
 			atof(sep->arg[1]),
 			atof(sep->arg[2]),
 			atof(sep->arg[3]),

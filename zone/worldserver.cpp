@@ -43,7 +43,6 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 #include "command.h"
 #include "corpse.h"
 #include "entity.h"
-#include "expedition.h"
 #include "quest_parser_collection.h"
 #include "guild_mgr.h"
 #include "mob.h"
@@ -55,8 +54,6 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 #include "zone.h"
 #include "zone_config.h"
 #include "zone_reload.h"
-#include "../common/shared_tasks.h"
-#include "shared_task_zone_messaging.h"
 #include "dialogue_window.h"
 #include "queryserv.h"
 
@@ -115,11 +112,10 @@ bool WorldServer::Connected() const
 	return m_connection->Connected();
 }
 
-void WorldServer::SetZoneData(uint32 iZoneID, uint32 iInstanceID) {
+void WorldServer::SetZoneData(uint32 iZoneID) {
 	auto pack = new ServerPacket(ServerOP_SetZone, sizeof(SetZone_Struct));
 	SetZone_Struct* szs = (SetZone_Struct*)pack->pBuffer;
 	szs->zoneid = iZoneID;
-	szs->instanceid = iInstanceID;
 	if (zone) {
 		szs->staticzone = zone->IsStaticZone();
 	}
@@ -163,7 +159,7 @@ void WorldServer::OnConnected() {
 	safe_delete(pack);
 
 	if (is_zone_loaded) {
-		SetZoneData(zone->GetZoneID(), zone->GetInstanceID());
+		SetZoneData(zone->GetZoneID());
 		entity_list.UpdateWho(true);
 		SendEmoteMessage(
 			0,
@@ -314,7 +310,7 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 			break;
 		ServerSpawnCondition_Struct* ssc = (ServerSpawnCondition_Struct*)pack->pBuffer;
 
-		zone->spawn_conditions.SetCondition(zone->GetShortName(), zone->GetInstanceID(), ssc->condition_id, ssc->value, true);
+		zone->spawn_conditions.SetCondition(zone->GetShortName(), ssc->condition_id, ssc->value, true);
 		break;
 	}
 	case ServerOP_SpawnEvent: {
@@ -350,8 +346,7 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 			break;
 		ZoneToZone_Struct* ztz = (ZoneToZone_Struct*)pack->pBuffer;
 
-		if (ztz->current_zone_id == zone->GetZoneID()
-			&& ztz->current_instance_id == zone->GetInstanceID()) {
+		if (ztz->current_zone_id == zone->GetZoneID()) {
 			// it's a response
 			Entity* entity = entity_list.GetClientByName(ztz->name);
 			if (entity == 0)
@@ -363,7 +358,7 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 
 			if (ztz->response <= 0) {
 				zc2->success = ZONE_ERROR_NOTREADY;
-				entity->CastToMob()->SetZone(ztz->current_zone_id, ztz->current_instance_id);
+				entity->CastToMob()->SetZone(ztz->current_zone_id);
 				entity->CastToClient()->SetZoning(false);
 				entity->CastToClient()->SetLockSavePosition(false);
 			}
@@ -371,7 +366,6 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 				entity->CastToClient()->UpdateWho(1);
 				strn0cpy(zc2->char_name, entity->CastToMob()->GetName(), 64);
 				zc2->zoneID = ztz->requested_zone_id;
-				zc2->instanceID = ztz->requested_instance_id;
 				zc2->success = 1;
 
 				// This block is necessary to clean up any merc objects owned by a Client. Maybe we should do this for bots, too?
@@ -380,10 +374,10 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 					entity->CastToClient()->GetMerc()->ProcessClientZoneChange(entity->CastToClient());
 				}
 
-				entity->CastToMob()->SetZone(ztz->requested_zone_id, ztz->requested_instance_id);
+				entity->CastToMob()->SetZone(ztz->requested_zone_id);
 
 				if (ztz->ignorerestrictions == 3)
-					entity->CastToClient()->GoToSafeCoords(ztz->requested_zone_id, ztz->requested_instance_id);
+					entity->CastToClient()->GoToSafeCoords(ztz->requested_zone_id);
 			}
 
 			outapp->priority = 6;
@@ -546,7 +540,7 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 		}
 		ServerZoneStateChange_struct* zst = (ServerZoneStateChange_struct *)pack->pBuffer;
 		if (is_zone_loaded) {
-			SetZoneData(zone->GetZoneID(), zone->GetInstanceID());
+			SetZoneData(zone->GetZoneID());
 			if (zst->zoneid == zone->GetZoneID()) {
 				// This packet also doubles as "incoming client" notification, lets not shut down before they get here
 //				zone->StartShutdownTimer(AUTHENTICATION_TIMEOUT * 1000);
@@ -568,7 +562,7 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 		if (zst->adminname[0] != 0)
 			std::cout << "Zone bootup by " << zst->adminname << std::endl;
 
-		Zone::Bootup(zst->zoneid, zst->instanceid, zst->makestatic);
+		Zone::Bootup(zst->zoneid);
 		break;
 	}
 	case ServerOP_ZoneIncClient: {
@@ -578,7 +572,7 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 		}
 		ServerZoneIncomingClient_Struct* szic = (ServerZoneIncomingClient_Struct*)pack->pBuffer;
 		if (is_zone_loaded) {
-			SetZoneData(zone->GetZoneID(), zone->GetInstanceID());
+			SetZoneData(zone->GetZoneID());
 
 			if (szic->zoneid == zone->GetZoneID()) {
 				auto client = entity_list.GetClientByLSID(szic->lsid);
@@ -592,7 +586,7 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 			}
 		}
 		else {
-			if ((Zone::Bootup(szic->zoneid, szic->instanceid))) {
+			if ((Zone::Bootup(szic->zoneid))) {
 				zone->AddAuth(szic);
 			}
 		}
@@ -654,16 +648,6 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 				);
 			}
 
-			if (!szp->instance_id) {
-				client->MovePC(ZoneID(szp->zone), szp->instance_id, szp->x_pos, szp->y_pos, szp->z_pos, client->GetHeading(), szp->ignorerestrictions, GMSummon);
-			} else {
-				if (database.GetInstanceID(client->CharacterID(), ZoneID(szp->zone))) {
-					client->RemoveFromInstance(database.GetInstanceID(client->CharacterID(), ZoneID(szp->zone)));
-				}
-
-				client->AssignToInstance(szp->instance_id);
-				client->MovePC(ZoneID(szp->zone), szp->instance_id, szp->x_pos, szp->y_pos, szp->z_pos, client->GetHeading(), szp->ignorerestrictions, GMSummon);
-			}
 		}
 		break;
 	}
@@ -783,7 +767,6 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 			strcpy(szp->adminname, gmg->myname);
 			strcpy(szp->name, gmg->myname);
 			strcpy(szp->zone, zone->GetShortName());
-			szp->instance_id = zone->GetInstanceID();
 			szp->x_pos = client->GetX();
 			szp->y_pos = client->GetY();
 			szp->z_pos = client->GetZ();
@@ -991,7 +974,7 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 	case ServerOP_GroupLeave: {
 		ServerGroupLeave_Struct* gl = (ServerGroupLeave_Struct*)pack->pBuffer;
 		if (zone) {
-			if (gl->zoneid == zone->GetZoneID() && gl->instance_id == zone->GetInstanceID())
+			if (gl->zoneid == zone->GetZoneID())
 				break;
 
 			entity_list.SendGroupLeave(gl->gid, gl->member_name);
@@ -1092,7 +1075,6 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 			ServerGroupJoin_Struct* gj = (ServerGroupJoin_Struct*)pack2->pBuffer;
 			gj->gid = group->GetID();
 			gj->zoneid = zone->GetZoneID();
-			gj->instance_id = zone->GetInstanceID();
 			strn0cpy(gj->member_name, sgfs->gf.name2, sizeof(gj->member_name));
 			worldserver.SendPacket(pack2);
 			safe_delete(pack2);
@@ -1208,7 +1190,7 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 	case ServerOP_GroupJoin: {
 		ServerGroupJoin_Struct* gj = (ServerGroupJoin_Struct*)pack->pBuffer;
 		if (zone) {
-			if (gj->zoneid == zone->GetZoneID() && gj->instance_id == zone->GetInstanceID())
+			if (gj->zoneid == zone->GetZoneID())
 				break;
 
 			Group* g = entity_list.GetGroupByID(gj->gid);
@@ -1222,7 +1204,7 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 	case ServerOP_ForceGroupUpdate: {
 		ServerForceGroupUpdate_Struct* fgu = (ServerForceGroupUpdate_Struct*)pack->pBuffer;
 		if (zone) {
-			if (fgu->origZoneID == zone->GetZoneID() && fgu->instance_id == zone->GetInstanceID())
+			if (fgu->origZoneID == zone->GetZoneID())
 				break;
 
 			entity_list.ForceGroupUpdate(fgu->gid);
@@ -1232,7 +1214,7 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 	case ServerOP_OOZGroupMessage: {
 		ServerGroupChannelMessage_Struct* gcm = (ServerGroupChannelMessage_Struct*)pack->pBuffer;
 		if (zone) {
-			if (gcm->zoneid == zone->GetZoneID() && gcm->instanceid == zone->GetInstanceID())
+			if (gcm->zoneid == zone->GetZoneID())
 				break;
 
 			entity_list.GroupMessage(gcm->groupid, gcm->from, gcm->message);
@@ -1242,7 +1224,7 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 	case ServerOP_DisbandGroup: {
 		ServerDisbandGroup_Struct* sd = (ServerDisbandGroup_Struct*)pack->pBuffer;
 		if (zone) {
-			if (sd->zoneid == zone->GetZoneID() && sd->instance_id == zone->GetInstanceID())
+			if (sd->zoneid == zone->GetZoneID())
 				break;
 
 			Group *g = entity_list.GetGroupByID(sd->groupid);
@@ -1254,7 +1236,7 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 	case ServerOP_RaidAdd: {
 		ServerRaidGeneralAction_Struct* rga = (ServerRaidGeneralAction_Struct*)pack->pBuffer;
 		if (zone) {
-			if (rga->zoneid == zone->GetZoneID() && rga->instance_id == zone->GetInstanceID())
+			if (rga->zoneid == zone->GetZoneID())
 				break;
 
 			Raid *r = entity_list.GetRaidByID(rga->rid);
@@ -1269,7 +1251,7 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 	case ServerOP_RaidRemove: {
 		ServerRaidGeneralAction_Struct* rga = (ServerRaidGeneralAction_Struct*)pack->pBuffer;
 		if (zone) {
-			if (rga->zoneid == zone->GetZoneID() && rga->instance_id == zone->GetInstanceID())
+			if (rga->zoneid == zone->GetZoneID())
 				break;
 
 			Raid *r = entity_list.GetRaidByID(rga->rid);
@@ -1289,7 +1271,7 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 	case ServerOP_RaidDisband: {
 		ServerRaidGeneralAction_Struct* rga = (ServerRaidGeneralAction_Struct*)pack->pBuffer;
 		if (zone) {
-			if (rga->zoneid == zone->GetZoneID() && rga->instance_id == zone->GetInstanceID())
+			if (rga->zoneid == zone->GetZoneID())
 				break;
 
 			Raid *r = entity_list.GetRaidByID(rga->rid);
@@ -1304,7 +1286,7 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 	case ServerOP_RaidLockFlag: {
 		ServerRaidGeneralAction_Struct* rga = (ServerRaidGeneralAction_Struct*)pack->pBuffer;
 		if (zone) {
-			if (rga->zoneid == zone->GetZoneID() && rga->instance_id == zone->GetInstanceID())
+			if (rga->zoneid == zone->GetZoneID())
 				break;
 
 			Raid *r = entity_list.GetRaidByID(rga->rid);
@@ -1321,7 +1303,7 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 	case ServerOP_RaidChangeGroup: {
 		ServerRaidGeneralAction_Struct* rga = (ServerRaidGeneralAction_Struct*)pack->pBuffer;
 		if (zone) {
-			if (rga->zoneid == zone->GetZoneID() && rga->instance_id == zone->GetInstanceID())
+			if (rga->zoneid == zone->GetZoneID())
 				break;
 
 			Raid *r = entity_list.GetRaidByID(rga->rid);
@@ -1349,7 +1331,7 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 	case ServerOP_UpdateGroup: {
 		ServerRaidGeneralAction_Struct* rga = (ServerRaidGeneralAction_Struct*)pack->pBuffer;
 		if (zone) {
-			if (rga->zoneid == zone->GetZoneID() && rga->instance_id == zone->GetInstanceID())
+			if (rga->zoneid == zone->GetZoneID())
 				break;
 
 			Raid *r = entity_list.GetRaidByID(rga->rid);
@@ -1362,7 +1344,7 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 	case ServerOP_RaidGroupLeader: {
 		ServerRaidGeneralAction_Struct* rga = (ServerRaidGeneralAction_Struct*)pack->pBuffer;
 		if (zone) {
-			if (rga->zoneid == zone->GetZoneID() && rga->instance_id == zone->GetInstanceID())
+			if (rga->zoneid == zone->GetZoneID())
 				break;
 		}
 		break;
@@ -1370,7 +1352,7 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 	case ServerOP_RaidLeader: {
 		ServerRaidGeneralAction_Struct* rga = (ServerRaidGeneralAction_Struct*)pack->pBuffer;
 		if (zone) {
-			if (rga->zoneid == zone->GetZoneID() && rga->instance_id == zone->GetInstanceID())
+			if (rga->zoneid == zone->GetZoneID())
 				break;
 
 			Raid *r = entity_list.GetRaidByID(rga->rid);
@@ -1390,7 +1372,7 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 	case ServerOP_DetailsChange: {
 		ServerRaidGeneralAction_Struct* rga = (ServerRaidGeneralAction_Struct*)pack->pBuffer;
 		if (zone) {
-			if (rga->zoneid == zone->GetZoneID() && rga->instance_id == zone->GetInstanceID())
+			if (rga->zoneid == zone->GetZoneID())
 				break;
 
 			Raid *r = entity_list.GetRaidByID(rga->rid);
@@ -1405,7 +1387,7 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 	case ServerOP_RaidGroupDisband: {
 		ServerRaidGeneralAction_Struct* rga = (ServerRaidGeneralAction_Struct*)pack->pBuffer;
 		if (zone) {
-			if (rga->zoneid == zone->GetZoneID() && rga->instance_id == zone->GetInstanceID())
+			if (rga->zoneid == zone->GetZoneID())
 				break;
 
 			Client *c = entity_list.GetClientByName(rga->playername);
@@ -1643,23 +1625,11 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 		}
 		break;
 	}
-	case ServerOP_InstanceUpdateTime:
-	{
-		ServerInstanceUpdateTime_Struct *iut = (ServerInstanceUpdateTime_Struct*)pack->pBuffer;
-		if (zone)
-		{
-			if (zone->GetInstanceID() == iut->instance_id)
-			{
-				zone->SetInstanceTimer(iut->new_duration);
-			}
-		}
-		break;
-	}
 	case ServerOP_DepopAllPlayersCorpses:
 	{
 		ServerDepopAllPlayersCorpses_Struct *sdapcs = (ServerDepopAllPlayersCorpses_Struct *)pack->pBuffer;
 
-		if (zone && !((zone->GetZoneID() == sdapcs->ZoneID) && (zone->GetInstanceID() == sdapcs->InstanceID)))
+		if (zone && !((zone->GetZoneID() == sdapcs->ZoneID)))
 			entity_list.RemoveAllCorpsesByCharID(sdapcs->CharacterID);
 
 		break;
@@ -1669,7 +1639,7 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 	{
 		ServerDepopPlayerCorpse_Struct *sdpcs = (ServerDepopPlayerCorpse_Struct *)pack->pBuffer;
 
-		if (zone && !((zone->GetZoneID() == sdpcs->ZoneID) && (zone->GetInstanceID() == sdpcs->InstanceID)))
+		if (zone && !((zone->GetZoneID() == sdpcs->ZoneID)))
 			entity_list.RemoveCorpseByDBID(sdpcs->DBID);
 
 		break;
@@ -1718,7 +1688,7 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 		if (zone)
 		{
 			ServerQGlobalUpdate_Struct *qgu = (ServerQGlobalUpdate_Struct*)pack->pBuffer;
-			if (qgu->from_zone_id != zone->GetZoneID() || qgu->from_instance_id != zone->GetInstanceID())
+			if (qgu->from_zone_id != zone->GetZoneID())
 			{
 				QGlobal temp;
 				temp.npc_id = qgu->npc_id;
@@ -1743,155 +1713,11 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 		if (zone)
 		{
 			ServerQGlobalDelete_Struct *qgd = (ServerQGlobalDelete_Struct*)pack->pBuffer;
-			if (qgd->from_zone_id != zone->GetZoneID() || qgd->from_instance_id != zone->GetInstanceID())
+			if (qgd->from_zone_id != zone->GetZoneID())
 			{
 				entity_list.DeleteQGlobal(std::string((char*)qgd->name), qgd->npc_id, qgd->char_id, qgd->zone_id);
 				zone->DeleteQGlobal(std::string((char*)qgd->name), qgd->npc_id, qgd->char_id, qgd->zone_id);
 			}
-		}
-		break;
-	}
-	case ServerOP_AdventureRequestAccept:
-	{
-		ServerAdventureRequestAccept_Struct *ars = (ServerAdventureRequestAccept_Struct*)pack->pBuffer;
-		Client *c = entity_list.GetClientByName(ars->leader);
-		if (c)
-		{
-			c->NewAdventure(ars->id, ars->theme, ars->text, ars->member_count, (const char*)(pack->pBuffer + sizeof(ServerAdventureRequestAccept_Struct)));
-			c->ClearPendingAdventureRequest();
-		}
-		break;
-	}
-	case ServerOP_AdventureRequestDeny:
-	{
-		ServerAdventureRequestDeny_Struct *ars = (ServerAdventureRequestDeny_Struct*)pack->pBuffer;
-		Client *c = entity_list.GetClientByName(ars->leader);
-		if (c)
-		{
-			c->SendAdventureError(ars->reason);
-			c->ClearPendingAdventureRequest();
-		}
-		break;
-	}
-	case ServerOP_AdventureCreateDeny:
-	{
-		Client *c = entity_list.GetClientByName((const char*)pack->pBuffer);
-		if (c)
-		{
-			c->ClearPendingAdventureData();
-			c->ClearPendingAdventureCreate();
-		}
-		break;
-	}
-	case ServerOP_AdventureData:
-	{
-		Client *c = entity_list.GetClientByName((const char*)pack->pBuffer);
-		if (c)
-		{
-			c->ClearAdventureData();
-			auto adv_data = new char[pack->size];
-			memcpy(adv_data, pack->pBuffer, pack->size);
-			c->SetAdventureData(adv_data);
-			c->ClearPendingAdventureData();
-			c->ClearPendingAdventureCreate();
-			c->SendAdventureDetails();
-		}
-		break;
-	}
-	case ServerOP_AdventureDataClear:
-	{
-		Client *c = entity_list.GetClientByName((const char*)pack->pBuffer);
-		if (c)
-		{
-			if (c->HasAdventureData())
-			{
-				c->ClearAdventureData();
-				c->SendAdventureError("You are not currently assigned to an adventure.");
-			}
-		}
-		break;
-	}
-	case ServerOP_AdventureClickDoorReply:
-	{
-		ServerPlayerClickedAdventureDoorReply_Struct *adr = (ServerPlayerClickedAdventureDoorReply_Struct*)pack->pBuffer;
-		Client *c = entity_list.GetClientByName(adr->player);
-		if (c)
-		{
-			c->ClearPendingAdventureDoorClick();
-			c->MovePC(adr->zone_id, adr->instance_id, adr->x, adr->y, adr->z, adr->h, 0);
-		}
-		break;
-	}
-	case ServerOP_AdventureClickDoorError:
-	{
-		Client *c = entity_list.GetClientByName((const char*)pack->pBuffer);
-		if (c)
-		{
-			c->ClearPendingAdventureDoorClick();
-			c->MessageString(Chat::Red, 5141);
-		}
-		break;
-	}
-	case ServerOP_AdventureLeaveReply:
-	{
-		Client *c = entity_list.GetClientByName((const char*)pack->pBuffer);
-		if (c)
-		{
-			c->ClearPendingAdventureLeave();
-			c->ClearCurrentAdventure();
-		}
-		break;
-	}
-	case ServerOP_AdventureLeaveDeny:
-	{
-		Client *c = entity_list.GetClientByName((const char*)pack->pBuffer);
-		if (c)
-		{
-			c->ClearPendingAdventureLeave();
-			c->Message(Chat::Red, "You cannot leave this adventure at this time.");
-		}
-		break;
-	}
-	case ServerOP_AdventureCountUpdate:
-	{
-		ServerAdventureCountUpdate_Struct *ac = (ServerAdventureCountUpdate_Struct*)pack->pBuffer;
-		Client *c = entity_list.GetClientByName(ac->player);
-		if (c)
-		{
-			c->SendAdventureCount(ac->count, ac->total);
-		}
-		break;
-	}
-	case ServerOP_AdventureZoneData:
-	{
-		if (zone)
-		{
-			safe_delete(zone->adv_data);
-			zone->adv_data = new char[pack->size];
-			memcpy(zone->adv_data, pack->pBuffer, pack->size);
-			ServerZoneAdventureDataReply_Struct* ds = (ServerZoneAdventureDataReply_Struct*)zone->adv_data;
-		}
-		break;
-	}
-	case ServerOP_AdventureFinish:
-	{
-		ServerAdventureFinish_Struct *af = (ServerAdventureFinish_Struct*)pack->pBuffer;
-		Client *c = entity_list.GetClientByName(af->player);
-		if (c)
-		{
-			c->AdventureFinish(af->win, af->theme, af->points);
-		}
-		break;
-	}
-	case ServerOP_AdventureLeaderboard:
-	{
-		Client *c = entity_list.GetClientByName((const char*)pack->pBuffer);
-		if (c)
-		{
-			auto outapp = new EQApplicationPacket(OP_AdventureLeaderboardReply,
-				sizeof(AdventureLeaderboard_Struct));
-			memcpy(outapp->pBuffer, pack->pBuffer + 64, sizeof(AdventureLeaderboard_Struct));
-			c->FastQueuePacket(&outapp);
 		}
 		break;
 	}
@@ -1938,15 +1764,6 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 			entity_list.RemoveAllDoors();
 			zone->LoadZoneDoors();
 			entity_list.RespawnAllDoors();
-		}
-		break;
-	}
-	case ServerOP_ReloadDzTemplates:
-	{
-		if (zone)
-		{
-			zone->SendReloadMessage("Dynamic Zone Templates");
-			zone->LoadDynamicZoneTemplates();
 		}
 		break;
 	}
@@ -2013,15 +1830,6 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 		}
 		break;
 	}
-	case ServerOP_ReloadTasks:
-	{
-		if (RuleB(Tasks, EnableTaskSystem) && zone && zone->IsLoaded()) {
-			zone->SendReloadMessage("Tasks");
-			HandleReloadTasks(pack);
-		}
-
-		break;
-	}
 	case ServerOP_ReloadTitles:
 	{
 		if (zone && zone->IsLoaded()) {
@@ -2067,7 +1875,7 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 	{
 		if (zone && zone->IsLoaded()) {
 			zone->SendReloadMessage("Zone Points");
-			content_db.LoadStaticZonePoints(&zone->zone_point_list, zone->GetShortName(), zone->GetInstanceVersion());
+			content_db.LoadStaticZonePoints(&zone->zone_point_list, zone->GetShortName());
 		}
 		break;
 	}
@@ -2075,7 +1883,7 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 	{
 		zone_store.LoadZones(content_db);
 		if (zone && zone->IsLoaded()) {
-			zone->LoadZoneCFG(zone->GetShortName(), zone->GetInstanceVersion());
+			zone->LoadZoneCFG(zone->GetShortName());
 			zone->SendReloadMessage("Zone Data");
 		}
 		break;
@@ -2101,18 +1909,6 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 			return;
 
 		uint32 Type = pack->ReadUInt32();;
-
-		switch (Type)
-		{
-		case QSG_LFGuild:
-		{
-			c->HandleLFGuildResponse(pack);
-			break;
-		}
-
-		default:
-			break;
-		}
 
 		break;
 	}
@@ -2167,181 +1963,11 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 					DialogueWindow::Render(client.second, message);
 				}
 			}
-		} else if (update_type == CZUpdateType_Expedition) {
-			for (auto &client: entity_list.GetClientList()) {
-				if (client.second->GetExpedition() && client.second->GetExpedition()->GetID() == update_identifier) {
-					DialogueWindow::Render(client.second, message);
-				}
-			}
 		} else if (update_type == CZUpdateType_ClientName) {
 			auto client = entity_list.GetClientByName(client_name);
 			if (client) {
 				DialogueWindow::Render(client, message);
 			}
-		}
-		break;
-	}
-	case ServerOP_CZLDoNUpdate:
-	{
-		CZLDoNUpdate_Struct* CZLU = (CZLDoNUpdate_Struct*) pack->pBuffer;
-		uint8 update_type = CZLU->update_type;
-		uint8 update_subtype = CZLU->update_subtype;
-		int update_identifier = CZLU->update_identifier;
-		uint32 theme_id = CZLU->theme_id;
-		int points = CZLU->points;
-		const char* client_name = CZLU->client_name;
-		if (update_type == CZUpdateType_Character) {
-			auto client = entity_list.GetClientByCharID(update_identifier);
-			if (client) {
-				switch (update_subtype) {
-					case CZLDoNUpdateSubtype_AddLoss:
-						client->UpdateLDoNWinLoss(theme_id, false);
-						break;
-					case CZLDoNUpdateSubtype_AddPoints:
-						client->UpdateLDoNPoints(theme_id, points);
-						break;
-					case CZLDoNUpdateSubtype_AddWin:
-						client->UpdateLDoNWinLoss(theme_id, true);
-						break;
-					case CZLDoNUpdateSubtype_RemoveLoss:
-						client->UpdateLDoNWinLoss(theme_id, false, true);
-						break;
-					case CZLDoNUpdateSubtype_RemoveWin:
-						client->UpdateLDoNWinLoss(theme_id, true, true);
-						break;
-					default:
-						break;
-				}
-			}
-			break;
-		} else if (update_type == CZUpdateType_Group) {
-			auto client_group = entity_list.GetGroupByID(update_identifier);
-			if (client_group) {
-				for (int member_index = 0; member_index < MAX_GROUP_MEMBERS; member_index++) {
-					if (client_group->members[member_index] && client_group->members[member_index]->IsClient()) {
-						auto client_group_member = client_group->members[member_index]->CastToClient();
-						switch (update_subtype) {
-							case CZLDoNUpdateSubtype_AddLoss:
-								client_group_member->UpdateLDoNWinLoss(theme_id, false);
-								break;
-							case CZLDoNUpdateSubtype_AddPoints:
-								client_group_member->UpdateLDoNPoints(theme_id, points);
-								break;
-							case CZLDoNUpdateSubtype_AddWin:
-								client_group_member->UpdateLDoNWinLoss(theme_id, true);
-								break;
-							case CZLDoNUpdateSubtype_RemoveLoss:
-								client_group_member->UpdateLDoNWinLoss(theme_id, false, true);
-								break;
-							case CZLDoNUpdateSubtype_RemoveWin:
-								client_group_member->UpdateLDoNWinLoss(theme_id, true, true);
-								break;
-							default:
-								break;
-						}
-					}
-				}
-			}
-		} else if (update_type == CZUpdateType_Raid) {
-			auto client_raid = entity_list.GetRaidByID(update_identifier);
-			if (client_raid) {
-				for (int member_index = 0; member_index < MAX_RAID_MEMBERS; member_index++) {
-					auto client_raid_member = client_raid->members[member_index].member;
-					if (client_raid_member && client_raid_member->IsClient()) {
-						switch (update_subtype) {
-							case CZLDoNUpdateSubtype_AddLoss:
-								client_raid_member->UpdateLDoNWinLoss(theme_id, false);
-								break;
-							case CZLDoNUpdateSubtype_AddPoints:
-								client_raid_member->UpdateLDoNPoints(theme_id, points);
-								break;
-							case CZLDoNUpdateSubtype_AddWin:
-								client_raid_member->UpdateLDoNWinLoss(theme_id, true);
-								break;
-							case CZLDoNUpdateSubtype_RemoveLoss:
-								client_raid_member->UpdateLDoNWinLoss(theme_id, false, true);
-								break;
-							case CZLDoNUpdateSubtype_RemoveWin:
-								client_raid_member->UpdateLDoNWinLoss(theme_id, true, true);
-								break;
-							default:
-								break;
-						}
-					}
-				}
-			}
-		} else if (update_type == CZUpdateType_Guild) {
-			for (auto &client : entity_list.GetClientList()) {
-				if (client.second->GuildID() > 0 && client.second->GuildID() == update_identifier) {
-					switch (update_subtype) {
-						case CZLDoNUpdateSubtype_AddLoss:
-							client.second->UpdateLDoNWinLoss(theme_id, false);
-							break;
-						case CZLDoNUpdateSubtype_AddPoints:
-							client.second->UpdateLDoNPoints(theme_id, points);
-							break;
-						case CZLDoNUpdateSubtype_AddWin:
-							client.second->UpdateLDoNWinLoss(theme_id, true);
-							break;
-						case CZLDoNUpdateSubtype_RemoveLoss:
-							client.second->UpdateLDoNWinLoss(theme_id, false, true);
-							break;
-						case CZLDoNUpdateSubtype_RemoveWin:
-							client.second->UpdateLDoNWinLoss(theme_id, true, true);
-							break;
-						default:
-							break;
-					}
-				}
-			}
-		} else if (update_type == CZUpdateType_Expedition) {
-			for (auto &client : entity_list.GetClientList()) {
-				if (client.second->GetExpedition() && client.second->GetExpedition()->GetID() == update_identifier) {
-					switch (update_subtype) {
-						case CZLDoNUpdateSubtype_AddLoss:
-							client.second->UpdateLDoNWinLoss(theme_id, false);
-							break;
-						case CZLDoNUpdateSubtype_AddPoints:
-							client.second->UpdateLDoNPoints(theme_id, points);
-							break;
-						case CZLDoNUpdateSubtype_AddWin:
-							client.second->UpdateLDoNWinLoss(theme_id, true);
-							break;
-						case CZLDoNUpdateSubtype_RemoveLoss:
-							client.second->UpdateLDoNWinLoss(theme_id, false, true);
-							break;
-						case CZLDoNUpdateSubtype_RemoveWin:
-							client.second->UpdateLDoNWinLoss(theme_id, true, true);
-							break;
-						default:
-							break;
-					}
-				}
-			}
-		} else if (update_type == CZUpdateType_ClientName) {
-			auto client = entity_list.GetClientByName(client_name);
-			if (client) {
-				switch (update_subtype) {
-					case CZLDoNUpdateSubtype_AddLoss:
-						client->UpdateLDoNWinLoss(theme_id, false);
-						break;
-					case CZLDoNUpdateSubtype_AddPoints:
-						client->UpdateLDoNPoints(theme_id, points);
-						break;
-					case CZLDoNUpdateSubtype_AddWin:
-						client->UpdateLDoNWinLoss(theme_id, true);
-						break;
-					case CZLDoNUpdateSubtype_RemoveLoss:
-						client->UpdateLDoNWinLoss(theme_id, false, true);
-						break;
-					case CZLDoNUpdateSubtype_RemoveWin:
-						client->UpdateLDoNWinLoss(theme_id, true, true);
-						break;
-					default:
-						break;
-				}
-			}
-			break;
 		}
 		break;
 	}
@@ -2385,12 +2011,6 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 		} else if (update_type == CZUpdateType_Guild) {
 			for (auto &client: entity_list.GetClientList()) {
 				if (client.second->GuildID() > 0 && client.second->GuildID() == update_identifier) {
-					client.second->SendMarqueeMessage(type, priority, fade_in, fade_out, duration, message);
-				}
-			}
-		} else if (update_type == CZUpdateType_Expedition) {
-			for (auto &client: entity_list.GetClientList()) {
-				if (client.second->GetExpedition() && client.second->GetExpedition()->GetID() == update_identifier) {
 					client.second->SendMarqueeMessage(type, priority, fade_in, fade_out, duration, message);
 				}
 			}
@@ -2441,12 +2061,6 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 					client.second->Message(type, message);
 				}
 			}
-		} else if (update_type == CZUpdateType_Expedition) {
-			for (auto &client: entity_list.GetClientList()) {
-				if (client.second->GetExpedition() && client.second->GetExpedition()->GetID() == update_identifier) {
-					client.second->Message(type, message);
-				}
-			}
 		} else if (update_type == CZUpdateType_ClientName) {
 			auto client = entity_list.GetClientByName(client_name);
 			if (client) {
@@ -2462,7 +2076,6 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 		uint8 update_subtype = CZM->update_subtype;
 		int update_identifier = CZM->update_identifier;
 		const char* zone_short_name = CZM->zone_short_name;
-		uint16 instance_id = CZM->instance_id;
 		const char* client_name = CZM->client_name;
 		if (update_type == CZUpdateType_Character) {
 			auto client = entity_list.GetClientByCharID(update_identifier);
@@ -2470,9 +2083,6 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 				switch (update_subtype) {
 					case CZMoveUpdateSubtype_MoveZone:
 						client->MoveZone(zone_short_name);
-						break;
-					case CZMoveUpdateSubtype_MoveZoneInstance:
-						client->MoveZoneInstance(instance_id);
 						break;
 				}
 			}
@@ -2485,9 +2095,6 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 						switch (update_subtype) {
 							case CZMoveUpdateSubtype_MoveZone:
 								group_member->MoveZone(zone_short_name);
-								break;
-							case CZMoveUpdateSubtype_MoveZoneInstance:
-								group_member->MoveZoneInstance(instance_id);
 								break;
 						}
 					}
@@ -2503,9 +2110,6 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 							case CZMoveUpdateSubtype_MoveZone:
 								raid_member->MoveZone(zone_short_name);
 								break;
-							case CZMoveUpdateSubtype_MoveZoneInstance:
-								raid_member->MoveZoneInstance(instance_id);
-								break;
 						}
 					}
 				}
@@ -2517,22 +2121,6 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 						case CZMoveUpdateSubtype_MoveZone:
 							client.second->MoveZone(zone_short_name);
 							break;
-						case CZMoveUpdateSubtype_MoveZoneInstance:
-							client.second->MoveZoneInstance(instance_id);
-							break;
-					}
-				}
-			}
-		} else if (update_type == CZUpdateType_Expedition) {
-			for (auto &client: entity_list.GetClientList()) {
-				if (client.second->GetExpedition() && client.second->GetExpedition()->GetID() == update_identifier) {
-					switch (update_subtype) {
-						case CZMoveUpdateSubtype_MoveZone:
-							client.second->MoveZone(zone_short_name);
-							break;
-						case CZMoveUpdateSubtype_MoveZoneInstance:
-							client.second->MoveZoneInstance(instance_id);
-							break;
 					}
 				}
 			}
@@ -2542,9 +2130,6 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 				switch (update_subtype) {
 					case CZMoveUpdateSubtype_MoveZone:
 						client->MoveZone(zone_short_name);
-						break;
-					case CZMoveUpdateSubtype_MoveZoneInstance:
-						client->MoveZoneInstance(instance_id);
 						break;
 				}
 			}
@@ -2587,12 +2172,6 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 		} else if (update_type == CZUpdateType_Guild) {
 			for (auto &client: entity_list.GetClientList()) {
 				if (client.second->GuildID() > 0 && client.second->GuildID() == update_identifier) {
-					client.second->SetEntityVariable(variable_name, variable_value);
-				}
-			}
-		} else if (update_type == CZUpdateType_Expedition) {
-			for (auto &client: entity_list.GetClientList()) {
-				if (client.second->GetExpedition() && client.second->GetExpedition()->GetID() == update_identifier) {
 					client.second->SetEntityVariable(variable_name, variable_value);
 				}
 			}
@@ -2644,12 +2223,6 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 		} else if (update_type == CZUpdateType_Guild) {
 			for (auto &client: entity_list.GetClientList()) {
 				if (client.second->GuildID() > 0 && client.second->GuildID() == update_identifier) {
-					client.second->Signal(signal);
-				}
-			}
-		} else if (update_type == CZUpdateType_Expedition) {
-			for (auto &client: entity_list.GetClientList()) {
-				if (client.second->GetExpedition() && client.second->GetExpedition()->GetID() == update_identifier) {
 					client.second->Signal(signal);
 				}
 			}
@@ -2733,19 +2306,6 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 					}
 				}
 			}
-		} else if (update_type == CZUpdateType_Expedition) {
-			for (auto &client: entity_list.GetClientList()) {
-				if (client.second->GetExpedition() && client.second->GetExpedition()->GetID() == update_identifier) {
-					switch (update_subtype) {
-						case CZSpellUpdateSubtype_Cast:
-							client.second->ApplySpellBuff(spell_id);
-							break;
-						case CZSpellUpdateSubtype_Remove:
-							client.second->BuffFadeBySpellID(spell_id);
-							break;
-					}
-				}
-			}
 		} else if (update_type == CZUpdateType_ClientName) {
 			auto client = entity_list.GetClientByName(client_name);
 			if (client) {
@@ -2761,195 +2321,6 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 		}
 		break;
 	}
-	case ServerOP_CZTaskUpdate:
-	{
-		CZTaskUpdate_Struct* CZTU = (CZTaskUpdate_Struct*) pack->pBuffer;
-		uint8 update_type = CZTU->update_type;
-		uint8 update_subtype = CZTU->update_subtype;
-		int update_identifier = CZTU->update_identifier;
-		uint32 task_identifier = CZTU->task_identifier;
-		int task_subidentifier = CZTU->task_subidentifier;
-		int update_count = CZTU->update_count;
-		bool enforce_level_requirement = CZTU->enforce_level_requirement;
-		const char* client_name = CZTU->client_name;
-		if (update_type == CZUpdateType_Character) {
-			auto client = entity_list.GetClientByCharID(update_identifier);
-			if (client) {
-				switch (update_subtype) {
-					case CZTaskUpdateSubtype_ActivityReset:
-						client->ResetTaskActivity(task_identifier, task_subidentifier);
-						break;
-					case CZTaskUpdateSubtype_ActivityUpdate:
-						client->UpdateTaskActivity(task_identifier, task_subidentifier, update_count);
-						break;
-					case CZTaskUpdateSubtype_AssignTask:
-						client->AssignTask(task_identifier, task_subidentifier, enforce_level_requirement);
-						break;
-					case CZTaskUpdateSubtype_DisableTask:
-						client->DisableTask(1, reinterpret_cast<int *>(task_identifier));
-						break;
-					case CZTaskUpdateSubtype_EnableTask:
-						client->EnableTask(1, reinterpret_cast<int *>(task_identifier));
-						break;
-					case CZTaskUpdateSubtype_FailTask:
-						client->FailTask(task_identifier);
-						break;
-					case CZTaskUpdateSubtype_RemoveTask:
-						client->RemoveTaskByTaskID(task_identifier);
-						break;
-				}
-			}
-			break;
-		} else if (update_type == CZUpdateType_Group) {
-			auto client_group = entity_list.GetGroupByID(update_identifier);
-			if (client_group) {
-				for (int member_index = 0; member_index < MAX_GROUP_MEMBERS; member_index++) {
-					if (client_group->members[member_index] && client_group->members[member_index]->IsClient()) {
-						auto group_member = client_group->members[member_index]->CastToClient();
-						switch (update_subtype) {
-							case CZTaskUpdateSubtype_ActivityReset:
-								group_member->ResetTaskActivity(task_identifier, task_subidentifier);
-								break;
-							case CZTaskUpdateSubtype_ActivityUpdate:
-								group_member->UpdateTaskActivity(task_identifier, task_subidentifier, update_count);
-								break;
-							case CZTaskUpdateSubtype_AssignTask:
-								group_member->AssignTask(task_identifier, task_subidentifier, enforce_level_requirement);
-								break;
-							case CZTaskUpdateSubtype_DisableTask:
-								group_member->DisableTask(1, reinterpret_cast<int *>(task_identifier));
-								break;
-							case CZTaskUpdateSubtype_EnableTask:
-								group_member->EnableTask(1, reinterpret_cast<int *>(task_identifier));
-								break;
-							case CZTaskUpdateSubtype_FailTask:
-								group_member->FailTask(task_identifier);
-								break;
-							case CZTaskUpdateSubtype_RemoveTask:
-								group_member->RemoveTaskByTaskID(task_identifier);
-								break;
-						}
-					}
-				}
-			}
-		} else if (update_type == CZUpdateType_Raid) {
-			auto client_raid = entity_list.GetRaidByID(update_identifier);
-			if (client_raid) {
-				for (int member_index = 0; member_index < MAX_RAID_MEMBERS; member_index++) {
-					if (client_raid->members[member_index].member && client_raid->members[member_index].member->IsClient()) {
-						auto raid_member = client_raid->members[member_index].member->CastToClient();
-						switch (update_subtype) {
-							case CZTaskUpdateSubtype_ActivityReset:
-								raid_member->ResetTaskActivity(task_identifier, task_subidentifier);
-								break;
-							case CZTaskUpdateSubtype_ActivityUpdate:
-								raid_member->UpdateTaskActivity(task_identifier, task_subidentifier, update_count);
-								break;
-							case CZTaskUpdateSubtype_AssignTask:
-								raid_member->AssignTask(task_identifier, task_subidentifier, enforce_level_requirement);
-								break;
-							case CZTaskUpdateSubtype_DisableTask:
-								raid_member->DisableTask(1, reinterpret_cast<int *>(task_identifier));
-								break;
-							case CZTaskUpdateSubtype_EnableTask:
-								raid_member->EnableTask(1, reinterpret_cast<int *>(task_identifier));
-								break;
-							case CZTaskUpdateSubtype_FailTask:
-								raid_member->FailTask(task_identifier);
-								break;
-							case CZTaskUpdateSubtype_RemoveTask:
-								raid_member->RemoveTaskByTaskID(task_identifier);
-								break;
-						}
-					}
-				}
-			}
-		} else if (update_type == CZUpdateType_Guild) {
-			for (auto &client: entity_list.GetClientList()) {
-				if (client.second->GuildID() > 0 && client.second->GuildID() == update_identifier) {
-					switch (update_subtype) {
-						case CZTaskUpdateSubtype_ActivityReset:
-							client.second->ResetTaskActivity(task_identifier, task_subidentifier);
-							break;
-						case CZTaskUpdateSubtype_ActivityUpdate:
-							client.second->UpdateTaskActivity(task_identifier, task_subidentifier, update_count);
-							break;
-						case CZTaskUpdateSubtype_AssignTask:
-							client.second->AssignTask(task_identifier, task_subidentifier, enforce_level_requirement);
-							break;
-						case CZTaskUpdateSubtype_DisableTask:
-							client.second->DisableTask(1, reinterpret_cast<int *>(task_identifier));
-							break;
-						case CZTaskUpdateSubtype_EnableTask:
-							client.second->EnableTask(1, reinterpret_cast<int *>(task_identifier));
-							break;
-						case CZTaskUpdateSubtype_FailTask:
-							client.second->FailTask(task_identifier);
-							break;
-						case CZTaskUpdateSubtype_RemoveTask:
-							client.second->RemoveTaskByTaskID(task_identifier);
-							break;
-					}
-				}
-			}
-		} else if (update_type == CZUpdateType_Expedition) {
-			for (auto &client: entity_list.GetClientList()) {
-				if (client.second->GetExpedition() && client.second->GetExpedition()->GetID() == update_identifier) {
-					switch (update_subtype) {
-						case CZTaskUpdateSubtype_ActivityReset:
-							client.second->ResetTaskActivity(task_identifier, task_subidentifier);
-							break;
-						case CZTaskUpdateSubtype_ActivityUpdate:
-							client.second->UpdateTaskActivity(task_identifier, task_subidentifier, update_count);
-							break;
-						case CZTaskUpdateSubtype_AssignTask:
-							client.second->AssignTask(task_identifier, task_subidentifier, enforce_level_requirement);
-							break;
-						case CZTaskUpdateSubtype_DisableTask:
-							client.second->DisableTask(1, reinterpret_cast<int *>(task_identifier));
-							break;
-						case CZTaskUpdateSubtype_EnableTask:
-							client.second->EnableTask(1, reinterpret_cast<int *>(task_identifier));
-							break;
-						case CZTaskUpdateSubtype_FailTask:
-							client.second->FailTask(task_identifier);
-							break;
-						case CZTaskUpdateSubtype_RemoveTask:
-							client.second->RemoveTaskByTaskID(task_identifier);
-							break;
-					}
-				}
-			}
-		} else if (update_type == CZUpdateType_ClientName) {
-			auto client = entity_list.GetClientByName(client_name);
-			if (client) {
-				switch (update_subtype) {
-					case CZTaskUpdateSubtype_ActivityReset:
-						client->ResetTaskActivity(task_identifier, task_subidentifier);
-						break;
-					case CZTaskUpdateSubtype_ActivityUpdate:
-						client->UpdateTaskActivity(task_identifier, task_subidentifier, update_count);
-						break;
-					case CZTaskUpdateSubtype_AssignTask:
-						client->AssignTask(task_identifier, task_subidentifier, enforce_level_requirement);
-						break;
-					case CZTaskUpdateSubtype_DisableTask:
-						client->DisableTask(1, reinterpret_cast<int *>(task_identifier));
-						break;
-					case CZTaskUpdateSubtype_EnableTask:
-						client->EnableTask(1, reinterpret_cast<int *>(task_identifier));
-						break;
-					case CZTaskUpdateSubtype_FailTask:
-						client->FailTask(task_identifier);
-						break;
-					case CZTaskUpdateSubtype_RemoveTask:
-						client->RemoveTaskByTaskID(task_identifier);
-						break;
-				}
-			}
-		}
-		break;
-	}
 	case ServerOP_WWDialogueWindow:
 	{
 		WWDialogueWindow_Struct* WWDW = (WWDialogueWindow_Struct*) pack->pBuffer;
@@ -2959,45 +2330,6 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 		for (auto &client : entity_list.GetClientList()) {
 			if (client.second->Admin() >= min_status && (client.second->Admin() <= max_status || max_status == AccountStatus::Player)) {
 				DialogueWindow::Render(client.second, message);
-			}
-		}
-		break;
-	}
-	case ServerOP_WWLDoNUpdate:
-	{
-		WWLDoNUpdate_Struct* WWLU = (WWLDoNUpdate_Struct*) pack->pBuffer;
-		uint8 update_type = WWLU->update_type;
-		uint32 theme_id = WWLU->theme_id;
-		int points = WWLU->points;
-		uint8 min_status = WWLU->min_status;
-		uint8 max_status = WWLU->max_status;
-		for (auto &client : entity_list.GetClientList()) {
-			switch (update_type) {
-				case WWLDoNUpdateType_AddLoss:
-					if (client.second->Admin() >= min_status && (client.second->Admin() <= max_status || max_status == AccountStatus::Player)) {
-						client.second->UpdateLDoNWinLoss(theme_id, false);
-					}
-					break;
-				case WWLDoNUpdateType_AddPoints:
-					if (client.second->Admin() >= min_status && (client.second->Admin() <= max_status || max_status == AccountStatus::Player)) {
-						client.second->UpdateLDoNPoints(theme_id, points);
-					}
-					break;
-				case WWLDoNUpdateType_AddWin:
-					if (client.second->Admin() >= min_status && (client.second->Admin() <= max_status || max_status == AccountStatus::Player)) {
-						client.second->UpdateLDoNWinLoss(theme_id, true);
-					}
-					break;
-				case WWLDoNUpdateType_RemoveLoss:
-					if (client.second->Admin() >= min_status && (client.second->Admin() <= max_status || max_status == AccountStatus::Player)) {
-						client.second->UpdateLDoNWinLoss(theme_id, false, true);
-					}
-					break;
-				case WWLDoNUpdateType_RemoveWin:
-					if (client.second->Admin() >= min_status && (client.second->Admin() <= max_status || max_status == AccountStatus::Player)) {
-						client.second->UpdateLDoNWinLoss(theme_id, true, true);
-					}
-					break;
 			}
 		}
 		break;
@@ -3038,7 +2370,6 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 	{
 		WWMove_Struct* WWM = (WWMove_Struct*) pack->pBuffer;
 		uint8 update_type = WWM->update_type;
-		uint16 instance_id = WWM->instance_id;
 		const char* zone_short_name = WWM->zone_short_name;
 		uint8 min_status = WWM->min_status;
 		uint8 max_status = WWM->max_status;
@@ -3047,11 +2378,6 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 				case WWMoveUpdateType_MoveZone:
 					if (client.second->Admin() >= min_status && (client.second->Admin() <= max_status || max_status == AccountStatus::Player)) {
 						client.second->MoveZone(zone_short_name);
-					}
-					break;
-				case WWMoveUpdateType_MoveZoneInstance:
-					if (client.second->Admin() >= min_status && (client.second->Admin() <= max_status || max_status == AccountStatus::Player)) {
-						client.second->MoveZoneInstance(instance_id);
 					}
 					break;
 			}
@@ -3116,45 +2442,6 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 			for (auto &client : entity_list.GetClientList()) {
 				if (client.second->Admin() >= min_status && (client.second->Admin() <= max_status || max_status == AccountStatus::Player)) {
 					client.second->BuffFadeBySpellID(spell_id);
-				}
-			}
-		}
-		break;
-	}
-	case ServerOP_WWTaskUpdate:
-	{
-		WWTaskUpdate_Struct* WWTU = (WWTaskUpdate_Struct*) pack->pBuffer;
-		uint8 update_type = WWTU->update_type;
-		uint32 task_identifier = WWTU->task_identifier;
-		int task_subidentifier = WWTU->task_subidentifier;
-		int update_count = WWTU->update_count;
-		bool enforce_level_requirement = WWTU->enforce_level_requirement;
-		uint8 min_status = WWTU->min_status;
-		uint8 max_status = WWTU->max_status;
-		for (auto &client : entity_list.GetClientList()) {
-			if (client.second->Admin() >= min_status && (client.second->Admin() <= max_status || max_status == AccountStatus::Player)) {
-				switch (update_type) {
-					case WWTaskUpdateType_ActivityReset:
-						client.second->ResetTaskActivity(task_identifier, task_subidentifier);
-						break;
-					case WWTaskUpdateType_ActivityUpdate:
-						client.second->UpdateTaskActivity(task_identifier, task_subidentifier, update_count);
-						break;
-					case WWTaskUpdateType_AssignTask:
-						client.second->AssignTask(task_identifier, task_subidentifier, enforce_level_requirement);
-						break;
-					case WWTaskUpdateType_DisableTask:
-						client.second->DisableTask(1, reinterpret_cast<int *>(task_identifier));
-						break;
-					case WWTaskUpdateType_EnableTask:
-						client.second->EnableTask(1, reinterpret_cast<int *>(task_identifier));
-						break;
-					case WWTaskUpdateType_FailTask:
-						client.second->FailTask(task_identifier);
-						break;
-					case WWTaskUpdateType_RemoveTask:
-						client.second->RemoveTaskByTaskID(task_identifier);
-						break;
 				}
 			}
 		}
@@ -3251,49 +2538,6 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 		if (client) {
 			client->MessageString(buf);
 		}
-		break;
-	}
-	case ServerOP_ExpeditionCreate:
-	case ServerOP_ExpeditionLockout:
-	case ServerOP_ExpeditionLockoutDuration:
-	case ServerOP_ExpeditionLockState:
-	case ServerOP_ExpeditionReplayOnJoin:
-	case ServerOP_ExpeditionDzAddPlayer:
-	case ServerOP_ExpeditionDzMakeLeader:
-	case ServerOP_ExpeditionCharacterLockout:
-	{
-		Expedition::HandleWorldMessage(pack);
-		break;
-	}
-	case ServerOP_DzCreated:
-	case ServerOP_DzDeleted:
-	case ServerOP_DzAddRemoveMember:
-	case ServerOP_DzSwapMembers:
-	case ServerOP_DzRemoveAllMembers:
-	case ServerOP_DzDurationUpdate:
-	case ServerOP_DzGetMemberStatuses:
-	case ServerOP_DzSetCompass:
-	case ServerOP_DzSetSafeReturn:
-	case ServerOP_DzSetZoneIn:
-	case ServerOP_DzSetSwitchID:
-	case ServerOP_DzUpdateMemberStatus:
-	case ServerOP_DzLeaderChanged:
-	case ServerOP_DzExpireWarning:
-	case ServerOP_DzMovePC:
-	{
-		DynamicZone::HandleWorldMessage(pack);
-		break;
-	}
-	case ServerOP_SharedTaskAcceptNewTask:
-	case ServerOP_SharedTaskUpdate:
-	case ServerOP_SharedTaskQuit:
-	case ServerOP_SharedTaskMemberlist:
-	case ServerOP_SharedTaskMemberChange:
-	case ServerOP_SharedTaskInvitePlayer:
-	case ServerOP_SharedTaskPurgeAllCommand:
-	case ServerOP_SharedTaskFailed:
-	{
-		SharedTaskZoneMessaging::HandleWorldMessage(pack);
 		break;
 	}
 	default: {
@@ -3458,60 +2702,6 @@ bool WorldServer::RezzPlayer(EQApplicationPacket* rpack, uint32 rezzexp, uint32 
 	safe_delete(pack);
 	return ret;
 }
-
-void WorldServer::SendReloadTasks(uint8 reload_type, uint32 task_id) {
-	auto pack = new ServerPacket(ServerOP_ReloadTasks, sizeof(ReloadTasks_Struct));
-	auto rts = (ReloadTasks_Struct*) pack->pBuffer;
-
-	rts->reload_type = reload_type;
-	rts->task_id = task_id;
-
-	SendPacket(pack);
-	safe_delete(pack);
-}
-
-void WorldServer::HandleReloadTasks(ServerPacket *pack)
-{
-	auto rts = (ReloadTasks_Struct*) pack->pBuffer;
-
-	LogTasks("Global reload of tasks received with Reload Type [{}] Task ID [{}]", rts->reload_type, rts->task_id);
-
-	switch (rts->reload_type) {
-		case RELOADTASKS:
-		{
-			entity_list.SaveAllClientsTaskState();
-
-			// TODO: Reload at the world level for shared tasks
-
-			if (!rts->task_id) {
-				LogTasks("Global reload of all Tasks");
-				safe_delete(task_manager);
-				task_manager = new TaskManager;
-				task_manager->LoadTasks();
-
-				entity_list.ReloadAllClientsTaskState();
-			} else {
-				LogTasks("Global reload of Task ID [{}]", rts->task_id);
-				task_manager->LoadTasks(rts->task_id);
-				entity_list.ReloadAllClientsTaskState(rts->task_id);
-			}
-
-			break;
-		}
-		case RELOADTASKSETS:
-		{
-			LogTasks("Global reload of all Task Sets");
-			task_manager->LoadTaskSets();
-			break;
-		}
-		default:
-		{
-			LogTasks("Unhandled global reload of Tasks Reload Type [{}] Task ID [{}]", rts->reload_type, rts->task_id);
-			break;
-		}
-	}
-}
-
 
 uint32 WorldServer::NextGroupID() {
 	//this system wastes a lot of potential group IDs (~5%), but

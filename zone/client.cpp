@@ -40,9 +40,6 @@ extern volatile bool RunLoops;
 #include "../common/data_verification.h"
 #include "../common/profanity_manager.h"
 #include "data_bucket.h"
-#include "expedition.h"
-#include "expedition_database.h"
-#include "expedition_request.h"
 #include "position.h"
 #include "worldserver.h"
 #include "zonedb.h"
@@ -50,9 +47,6 @@ extern volatile bool RunLoops;
 #include "petitions.h"
 #include "command.h"
 #include "water_map.h"
-#ifdef BOTS
-#include "bot_command.h"
-#endif
 #include "string_ids.h"
 
 #include "guild_mgr.h"
@@ -60,7 +54,6 @@ extern volatile bool RunLoops;
 #include "queryserv.h"
 #include "mob_movement_manager.h"
 #include "../common/content/world_content_service.h"
-#include "../common/expedition_lockout_timer.h"
 #include "cheat_manager.h"
 
 #include "../common/repositories/char_recipe_list_repository.h"
@@ -153,7 +146,6 @@ Client::Client(EQStreamInterface* ieqs)
   client_zone_wide_full_position_update_timer(5 * 60 * 1000),
   tribute_timer(Tribute_duration),
   proximity_timer(ClientProximity_interval),
-  TaskPeriodic_Timer(RuleI(TaskSystem, PeriodicCheckTimer) * 1000),
   charm_update_timer(6000),
   rest_timer(1),
   pick_lock_timer(1000),
@@ -206,7 +198,6 @@ Client::Client(EQStreamInterface* ieqs)
 	lsaccountid = 0;
 	guild_id = GUILD_NONE;
 	guildrank = 0;
-	GuildBanker = false;
 	memset(lskey, 0, sizeof(lskey));
 	strcpy(account_name, "");
 	tellsoff = false;
@@ -262,7 +253,6 @@ Client::Client(EQStreamInterface* ieqs)
 	tgb = false;
 	tribute_master_id = 0xFFFFFFFF;
 	tribute_timer.Disable();
-	task_state         = nullptr;
 	TotalSecondsPlayed = 0;
 	keyring.clear();
 	bind_sight_target = nullptr;
@@ -318,18 +308,6 @@ Client::Client(EQStreamInterface* ieqs)
 
 	InitializeBuffSlots();
 
-	adventure_request_timer = nullptr;
-	adventure_create_timer = nullptr;
-	adventure_leave_timer = nullptr;
-	adventure_door_timer = nullptr;
-	adv_requested_data = nullptr;
-	adventure_stats_timer = nullptr;
-	adventure_leaderboard_timer = nullptr;
-	adv_data = nullptr;
-	adv_requested_theme = LDoNThemes::Unused;
-	adv_requested_id = 0;
-	adv_requested_member_count = 0;
-
 	for(int i = 0; i < XTARGET_HARDCAP; ++i)
 	{
 		XTargets[i].Type = Auto;
@@ -360,8 +338,6 @@ Client::Client(EQStreamInterface* ieqs)
 	environment_damage_modifier = 0;
 	invulnerable_environment_damage = false;
 
-	// rate limiter
-	m_list_task_timers_rate_limit.Start(1000);
 
 	// gm
 	SetDisplayMobInfoWindow(true);
@@ -441,7 +417,6 @@ Client::~Client() {
 	if(IsHoveringForRespawn())
 	{
 		m_pp.zone_id = m_pp.binds[0].zone_id;
-		m_pp.zoneInstance = m_pp.binds[0].instance_id;
 		m_Position.x = m_pp.binds[0].x;
 		m_Position.y = m_pp.binds[0].y;
 		m_Position.z = m_pp.binds[0].z;
@@ -451,18 +426,9 @@ Client::~Client() {
 	// will need this data right away
 	Save(2); // This fails when database destructor is called first on shutdown
 
-	safe_delete(task_state);
 	safe_delete(KarmaUpdateTimer);
 	safe_delete(GlobalChatLimiterTimer);
 	safe_delete(qGlobals);
-	safe_delete(adventure_request_timer);
-	safe_delete(adventure_create_timer);
-	safe_delete(adventure_leave_timer);
-	safe_delete(adventure_door_timer);
-	safe_delete(adventure_stats_timer);
-	safe_delete(adventure_leaderboard_timer);
-	safe_delete_array(adv_requested_data);
-	safe_delete_array(adv_data);
 
 	ClearRespawnOptions();
 
@@ -536,9 +502,7 @@ void Client::SendZoneInPackets()
 		SendGuildMembers();
 		SendGuildURL();
 		SendGuildChannel();
-		SendGuildLFGuildStatus();
 	}
-	SendLFGuildStatus();
 
 	//No idea why live sends this if even were not in a guild
 	SendGuildMOTD();
@@ -716,7 +680,6 @@ bool Client::Save(uint8 iCommitNow) {
 	p_timers.Store(&database);
 
 	database.SaveCharacterTribute(CharacterID(), &m_pp);
-	SaveTaskState(); /* Save Character Task */
 
 	LogFood("Client::Save - hunger_level: [{}] thirst_level: [{}]", m_pp.hunger_level, m_pp.thirst_level);
 
@@ -1195,18 +1158,12 @@ void Client::ChannelMessageReceived(uint8 chan_num, uint8 language, uint8 lang_s
 		) {
 			auto* t = GetTarget()->CastToNPC();
 			if (!t->IsEngaged()) {
-				CheckLDoNHail(t);
 				CheckEmoteHail(t, message);
 
 				if (DistanceNoZ(m_Position, t->GetPosition()) <= RuleI(Range, Say)) {
 					
 					parse->EventNPC(EVENT_SAY, t, this, message, language);
 
-					if (RuleB(TaskSystem, EnableTaskSystem)) {
-						if (UpdateTasksOnSpeakWith(t)) {
-							t->DoQuestPause(this);
-						}
-					}
 				}
 			} else {
 				if (DistanceSquaredNoZ(m_Position, t->GetPosition()) <= RuleI(Range, Say)) {
@@ -1394,131 +1351,6 @@ void Client::SetMaxHP() {
 	Save();
 }
 
-bool Client::UpdateLDoNPoints(uint32 theme_id, int points) {
-
-/* make sure total stays in sync with individual buckets
-	m_pp.ldon_points_available = m_pp.ldon_points_guk
-		+m_pp.ldon_points_mir
-		+m_pp.ldon_points_mmc
-		+m_pp.ldon_points_ruj
-		+m_pp.ldon_points_tak; */
-
-	if(points < 0) {
-		if(m_pp.ldon_points_available < (0 - points))
-			return false;
-	}
-
-	switch (theme_id) {
-		case LDoNThemes::Unused: { // No theme, so distribute evenly across all
-			int split_points = (points / 5);
-			int guk_points = (split_points + (points % 5));
-			int mir_points = split_points;
-			int mmc_points = split_points;
-			int ruj_points = split_points;
-			int tak_points = split_points;
-			split_points = 0;
-			if(points < 0) {
-				if(m_pp.ldon_points_available < (0 - points)) {
-					return false;
-				}
-
-				if(m_pp.ldon_points_guk < (0 - guk_points)) {
-					mir_points += (guk_points + m_pp.ldon_points_guk);
-					guk_points = (0 - m_pp.ldon_points_guk);
-				}
-
-				if(m_pp.ldon_points_mir < (0 - mir_points)) {
-					mmc_points += (mir_points + m_pp.ldon_points_mir);
-					mir_points = (0 - m_pp.ldon_points_mir);
-				}
-
-				if(m_pp.ldon_points_mmc < (0 - mmc_points)) {
-					ruj_points += (mmc_points + m_pp.ldon_points_mmc);
-					mmc_points = (0 - m_pp.ldon_points_mmc);
-				}
-
-				if(m_pp.ldon_points_ruj < (0 - ruj_points)) {
-					tak_points += (ruj_points + m_pp.ldon_points_ruj);
-					ruj_points = (0 - m_pp.ldon_points_ruj);
-				}
-
-				if(m_pp.ldon_points_tak < (0 - tak_points)) {
-					split_points = (tak_points + m_pp.ldon_points_tak);
-					tak_points = (0 - m_pp.ldon_points_tak);
-				}
-			}
-			m_pp.ldon_points_guk += guk_points;
-			m_pp.ldon_points_mir += mir_points;
-			m_pp.ldon_points_mmc += mmc_points;
-			m_pp.ldon_points_ruj += ruj_points;
-			m_pp.ldon_points_tak += tak_points;
-			points -= split_points;
-			if (split_points != 0) { // if anything left, recursively loop thru again
-				UpdateLDoNPoints(0, split_points);
-			}
-			break;
-		}
-		case LDoNThemes::GUK:	{
-			if(points < 0) {
-				if(m_pp.ldon_points_guk < (0 - points)) {
-					return false;
-				}
-			}
-			m_pp.ldon_points_guk += points;
-			break;
-		}
-		case LDoNThemes::MIR: {
-			if(points < 0) {
-				if(m_pp.ldon_points_mir < (0 - points)) {
-					return false;
-				}
-			}
-			m_pp.ldon_points_mir += points;
-			break;
-		}
-		case LDoNThemes::MMC: {
-			if(points < 0) {
-				if(m_pp.ldon_points_mmc < (0 - points)) {
-					return false;
-				}
-			}
-			m_pp.ldon_points_mmc += points;
-			break;
-		}
-		case LDoNThemes::RUJ: {
-			if(points < 0) {
-				if(m_pp.ldon_points_ruj < (0 - points)) {
-					return false;
-				}
-			}
-			m_pp.ldon_points_ruj += points;
-			break;
-		}
-		case LDoNThemes::TAK: {
-			if(points < 0) {
-				if(m_pp.ldon_points_tak < (0 - points)) {
-					return false;
-				}
-			}
-			m_pp.ldon_points_tak += points;
-			break;
-		}
-	}
-	m_pp.ldon_points_available += points;
-	auto outapp = new EQApplicationPacket(OP_AdventurePointsUpdate, sizeof(AdventurePoints_Update_Struct));
-	AdventurePoints_Update_Struct* apus = (AdventurePoints_Update_Struct*)outapp->pBuffer;
-	apus->ldon_available_points = m_pp.ldon_points_available;
-	apus->ldon_guk_points = m_pp.ldon_points_guk;
-	apus->ldon_mirugal_points = m_pp.ldon_points_mir;
-	apus->ldon_mistmoore_points = m_pp.ldon_points_mmc;
-	apus->ldon_rujarkian_points = m_pp.ldon_points_ruj;
-	apus->ldon_takish_points = m_pp.ldon_points_tak;
-	outapp->priority = 6;
-	QueuePacket(outapp);
-	safe_delete(outapp);
-	return true;
-}
-
 void Client::SetSkill(EQ::skills::SkillType skillid, uint16 value) {
 	if (skillid > EQ::skills::HIGHEST_SKILL)
 		return;
@@ -1613,7 +1445,6 @@ void Client::UpdateWho(uint8 remove)
 	strn0cpy(s->lskey, lskey, sizeof(s->lskey));
 
 	s->zone        = zone->GetZoneID();
-	s->instance_id = zone->GetInstanceID();
 	s->race        = GetRace();
 	s->class_      = GetClass();
 	s->level       = GetLevel();
@@ -3465,7 +3296,6 @@ void Client::LinkDead()
 		raid->MemberZoned(this);
 	}
 
-	SetDynamicZoneMemberStatus(DynamicZoneMemberStatus::LinkDead);
 
 //	save_timer.Start(2500);
 	linkdead_timer.Start(RuleI(Zone,ClientLinkdeadMS));
@@ -4088,7 +3918,6 @@ void Client::SendOPTranslocateConfirm(Mob *Caster, uint16 SpellID) {
 
 	if((SpellID == 1422) || (SpellID == 1334) || (SpellID == 3243)) {
 		PendingTranslocateData.zone_id = ts->ZoneID = m_pp.binds[0].zone_id;
-		PendingTranslocateData.instance_id = m_pp.binds[0].instance_id;
 		PendingTranslocateData.x = ts->x = m_pp.binds[0].x;
 		PendingTranslocateData.y = ts->y = m_pp.binds[0].y;
 		PendingTranslocateData.z = ts->z = m_pp.binds[0].z;
@@ -4096,7 +3925,6 @@ void Client::SendOPTranslocateConfirm(Mob *Caster, uint16 SpellID) {
 	}
 	else {
 		PendingTranslocateData.zone_id = ts->ZoneID = ZoneID(Spell.teleport_zone);
-		PendingTranslocateData.instance_id = 0;
 		PendingTranslocateData.y = ts->y = Spell.base_value[0];
 		PendingTranslocateData.x = ts->x = Spell.base_value[1];
 		PendingTranslocateData.z = ts->z = Spell.base_value[2];
@@ -4973,7 +4801,6 @@ void Client::SendRespawnBinds()
 		RespawnOption opt;
 		opt.name = "Bind Location";
 		opt.zone_id = b->zone_id;
-		opt.instance_id = b->instance_id;
 		opt.x = b->x;
 		opt.y = b->y;
 		opt.z = b->z;
@@ -4984,7 +4811,6 @@ void Client::SendRespawnBinds()
 	RespawnOption rez;
 	rez.name = "Resurrect";
 	rez.zone_id = zone->GetZoneID();
-	rez.instance_id = zone->GetInstanceID();
 	rez.x = GetX();
 	rez.y = GetY();
 	rez.z = GetZ();
@@ -5033,243 +4859,6 @@ void Client::SendRespawnBinds()
 	return;
 }
 
-void Client::HandleLDoNOpen(NPC *target)
-{
-	if(target)
-	{
-		if(target->GetClass() != LDON_TREASURE)
-		{
-			LogDebug("[{}] tried to open [{}] but [{}] was not a treasure chest",
-				GetName(), target->GetName(), target->GetName());
-			return;
-		}
-
-		if (target->GetSpecialAbility(IMMUNE_OPEN))
-		{
-			LogDebug("[{}] tried to open [{}] but it was immune", GetName(), target->GetName());
-			return;
-		}
-
-		if(DistanceSquaredNoZ(m_Position, target->GetPosition()) > RuleI(Adventure, LDoNTrapDistanceUse))
-		{
-			LogDebug("[{}] tried to open [{}] but [{}] was out of range",
-				GetName(), target->GetName(), target->GetName());
-			Message(Chat::Red, "Treasure chest out of range.");
-			return;
-		}
-
-		if(target->IsLDoNTrapped())
-		{
-			if(target->GetLDoNTrapSpellID() != 0)
-			{
-				MessageString(Chat::Red, LDON_ACCIDENT_SETOFF2);
-				target->SpellFinished(target->GetLDoNTrapSpellID(), this, EQ::spells::CastingSlot::Item, 0, -1, spells[target->GetLDoNTrapSpellID()].resist_difficulty);
-				target->SetLDoNTrapSpellID(0);
-				target->SetLDoNTrapped(false);
-				target->SetLDoNTrapDetected(false);
-			}
-			else
-			{
-				target->SetLDoNTrapSpellID(0);
-				target->SetLDoNTrapped(false);
-				target->SetLDoNTrapDetected(false);
-			}
-		}
-
-		if(target->IsLDoNLocked())
-		{
-			MessageString(Chat::Skills, LDON_STILL_LOCKED, target->GetCleanName());
-			return;
-		}
-		else
-		{
-			target->AddToHateList(this, 0, 500000, false, false, false);
-			if(target->GetLDoNTrapType() != 0)
-			{
-				if(GetRaid())
-				{
-					GetRaid()->SplitExp(target->GetLevel()*target->GetLevel()*2625/10, target);
-				}
-				else if(GetGroup())
-				{
-					GetGroup()->SplitExp(target->GetLevel()*target->GetLevel()*2625/10, target);
-				}
-				else
-				{
-					AddEXP(target->GetLevel()*target->GetLevel()*2625/10, GetLevelCon(target->GetLevel()));
-				}
-			}
-			target->Death(this, 0, SPELL_UNKNOWN, EQ::skills::SkillHandtoHand);
-		}
-	}
-}
-
-void Client::HandleLDoNSenseTraps(NPC *target, uint16 skill, uint8 type)
-{
-	if(target && target->GetClass() == LDON_TREASURE)
-	{
-		if(target->IsLDoNTrapped())
-		{
-			if((target->GetLDoNTrapType() == LDoNTypeCursed || target->GetLDoNTrapType() == LDoNTypeMagical) && type != target->GetLDoNTrapType())
-			{
-				MessageString(Chat::Skills, LDON_CANT_DETERMINE_TRAP, target->GetCleanName());
-				return;
-			}
-
-			if(target->IsLDoNTrapDetected())
-			{
-				MessageString(Chat::Skills, LDON_CERTAIN_TRAP, target->GetCleanName());
-			}
-			else
-			{
-				int check = LDoNChest_SkillCheck(target, skill);
-				switch(check)
-				{
-				case -1:
-				case 0:
-					MessageString(Chat::Skills, LDON_DONT_KNOW_TRAPPED, target->GetCleanName());
-					break;
-				case 1:
-					MessageString(Chat::Skills, LDON_CERTAIN_TRAP, target->GetCleanName());
-					target->SetLDoNTrapDetected(true);
-					break;
-				default:
-					break;
-				}
-			}
-		}
-		else
-		{
-			MessageString(Chat::Skills, LDON_CERTAIN_NOT_TRAP, target->GetCleanName());
-		}
-	}
-}
-
-void Client::HandleLDoNDisarm(NPC *target, uint16 skill, uint8 type)
-{
-	if(target)
-	{
-		if(target->GetClass() == LDON_TREASURE)
-		{
-			if(!target->IsLDoNTrapped())
-			{
-				MessageString(Chat::Skills, LDON_WAS_NOT_TRAPPED, target->GetCleanName());
-				return;
-			}
-
-			if((target->GetLDoNTrapType() == LDoNTypeCursed || target->GetLDoNTrapType() == LDoNTypeMagical) && type != target->GetLDoNTrapType())
-			{
-				MessageString(Chat::Skills, LDON_HAVE_NOT_DISARMED, target->GetCleanName());
-				return;
-			}
-
-			int check = 0;
-			if(target->IsLDoNTrapDetected())
-			{
-				check = LDoNChest_SkillCheck(target, skill);
-			}
-			else
-			{
-				check = LDoNChest_SkillCheck(target, skill*33/100);
-			}
-			switch(check)
-			{
-			case 1:
-				target->SetLDoNTrapDetected(false);
-				target->SetLDoNTrapped(false);
-				target->SetLDoNTrapSpellID(0);
-				MessageString(Chat::Skills, LDON_HAVE_DISARMED, target->GetCleanName());
-				break;
-			case 0:
-				MessageString(Chat::Skills, LDON_HAVE_NOT_DISARMED, target->GetCleanName());
-				break;
-			case -1:
-				MessageString(Chat::Red, LDON_ACCIDENT_SETOFF2);
-				target->SpellFinished(target->GetLDoNTrapSpellID(), this, EQ::spells::CastingSlot::Item, 0, -1, spells[target->GetLDoNTrapSpellID()].resist_difficulty);
-				target->SetLDoNTrapSpellID(0);
-				target->SetLDoNTrapped(false);
-				target->SetLDoNTrapDetected(false);
-				break;
-			}
-		}
-	}
-}
-
-void Client::HandleLDoNPickLock(NPC *target, uint16 skill, uint8 type)
-{
-	if(target)
-	{
-		if(target->GetClass() == LDON_TREASURE)
-		{
-			if(target->IsLDoNTrapped())
-			{
-				MessageString(Chat::Red, LDON_ACCIDENT_SETOFF2);
-				target->SpellFinished(target->GetLDoNTrapSpellID(), this, EQ::spells::CastingSlot::Item, 0, -1, spells[target->GetLDoNTrapSpellID()].resist_difficulty);
-				target->SetLDoNTrapSpellID(0);
-				target->SetLDoNTrapped(false);
-				target->SetLDoNTrapDetected(false);
-			}
-
-			if(!target->IsLDoNLocked())
-			{
-				MessageString(Chat::Skills, LDON_WAS_NOT_LOCKED, target->GetCleanName());
-				return;
-			}
-
-			if((target->GetLDoNTrapType() == LDoNTypeCursed || target->GetLDoNTrapType() == LDoNTypeMagical) && type != target->GetLDoNTrapType())
-			{
-				Message(Chat::Skills, "You cannot unlock %s with this skill.", target->GetCleanName());
-				return;
-			}
-
-			int check = LDoNChest_SkillCheck(target, skill);
-
-			switch(check)
-			{
-			case 0:
-			case -1:
-				MessageString(Chat::Skills, LDON_PICKLOCK_FAILURE, target->GetCleanName());
-				break;
-			case 1:
-				target->SetLDoNLocked(false);
-				MessageString(Chat::Skills, LDON_PICKLOCK_SUCCESS, target->GetCleanName());
-				break;
-			}
-		}
-	}
-}
-
-int	Client::LDoNChest_SkillCheck(NPC *target, int skill)
-{
-	if(!target)
-		return -1;
-
-	int	chest_difficulty = target->GetLDoNLockedSkill() == 0 ? (target->GetLevel() * 5) : target->GetLDoNLockedSkill();
-	float base_difficulty = RuleR(Adventure, LDoNBaseTrapDifficulty);
-
-	if(chest_difficulty == 0)
-		chest_difficulty = 5;
-
-	float chance = ((100.0f - base_difficulty) * ((float)skill / (float)chest_difficulty));
-
-	if(chance > (100.0f - base_difficulty))
-	{
-		chance = 100.0f - base_difficulty;
-	}
-
-	float d100 = (float)zone->random.Real(0, 100);
-
-	if(d100 <= chance)
-		return 1;
-	else
-	{
-		if(d100 > (chance + RuleR(Adventure, LDoNCriticalFailTrapThreshold)))
-			return -1;
-	}
-
-	return 0;
-}
-
 void Client::SummonAndRezzAllCorpses()
 {
 	PendingRezzXP = -1;
@@ -5280,7 +4869,6 @@ void Client::SummonAndRezzAllCorpses()
 
 	sdapcs->CharacterID = CharacterID();
 	sdapcs->ZoneID = zone->GetZoneID();
-	sdapcs->InstanceID = zone->GetInstanceID();
 
 	worldserver.SendPacket(Pack);
 
@@ -5288,7 +4876,7 @@ void Client::SummonAndRezzAllCorpses()
 
 	entity_list.RemoveAllCorpsesByCharID(CharacterID());
 
-	int CorpseCount = database.SummonAllCharacterCorpses(CharacterID(), zone->GetZoneID(), zone->GetInstanceID(), GetPosition());
+	int CorpseCount = database.SummonAllCharacterCorpses(CharacterID(), zone->GetZoneID(), GetPosition());
 	if(CorpseCount <= 0)
 	{
 		Message(Chat::Yellow, "You have no corpses to summnon.");
@@ -5315,7 +4903,6 @@ void Client::SummonAllCorpses(const glm::vec4& position)
 
 	sdapcs->CharacterID = CharacterID();
 	sdapcs->ZoneID = zone->GetZoneID();
-	sdapcs->InstanceID = zone->GetInstanceID();
 
 	worldserver.SendPacket(Pack);
 
@@ -5323,7 +4910,7 @@ void Client::SummonAllCorpses(const glm::vec4& position)
 
 	entity_list.RemoveAllCorpsesByCharID(CharacterID());
 
-	database.SummonAllCharacterCorpses(CharacterID(), zone->GetZoneID(), zone->GetInstanceID(), summonLocation);
+	database.SummonAllCharacterCorpses(CharacterID(), zone->GetZoneID(), summonLocation);
 }
 
 void Client::DepopAllCorpses()
@@ -5334,7 +4921,6 @@ void Client::DepopAllCorpses()
 
 	sdapcs->CharacterID = CharacterID();
 	sdapcs->ZoneID = zone->GetZoneID();
-	sdapcs->InstanceID = zone->GetInstanceID();
 
 	worldserver.SendPacket(Pack);
 
@@ -5351,7 +4937,6 @@ void Client::DepopPlayerCorpse(uint32 dbid)
 
 	sdpcs->DBID = dbid;
 	sdpcs->ZoneID = zone->GetZoneID();
-	sdpcs->InstanceID = zone->GetInstanceID();
 
 	worldserver.SendPacket(Pack);
 
@@ -5390,9 +4975,6 @@ void Client::SetStartZone(uint32 zoneid, float x, float y, float z, float headin
 		return;
 
 	m_pp.binds[4].zone_id = zoneid;
-	if(zone->GetInstanceID() != 0 && zone->IsInstancePersistent()) {
-		m_pp.binds[4].instance_id = zone->GetInstanceID();
-	}
 
 	if (x == 0 && y == 0 && z == 0) {
 		auto zd = GetZone(m_pp.binds[4].zone_id);
@@ -5632,107 +5214,6 @@ bool Client::TryReward(uint32 claim_id)
 	return true;
 }
 
-uint32 Client::GetLDoNPointsTheme(uint32 t)
-{
-	switch(t)
-	{
-	case LDoNThemes::GUK:
-		return m_pp.ldon_points_guk;
-	case LDoNThemes::MIR:
-		return m_pp.ldon_points_mir;
-	case LDoNThemes::MMC:
-		return m_pp.ldon_points_mmc;
-	case LDoNThemes::RUJ:
-		return m_pp.ldon_points_ruj;
-	case LDoNThemes::TAK:
-		return m_pp.ldon_points_tak;
-	default:
-		return 0;
-	}
-}
-
-uint32 Client::GetLDoNWinsTheme(uint32 t)
-{
-	switch(t)
-	{
-	case LDoNThemes::GUK:
-		return m_pp.ldon_wins_guk;
-	case LDoNThemes::MIR:
-		return m_pp.ldon_wins_mir;
-	case LDoNThemes::MMC:
-		return m_pp.ldon_wins_mmc;
-	case LDoNThemes::RUJ:
-		return m_pp.ldon_wins_ruj;
-	case LDoNThemes::TAK:
-		return m_pp.ldon_wins_tak;
-	default:
-		return 0;
-	}
-}
-
-uint32 Client::GetLDoNLossesTheme(uint32 t)
-{
-	switch(t)
-	{
-	case LDoNThemes::GUK:
-		return m_pp.ldon_losses_guk;
-	case LDoNThemes::MIR:
-		return m_pp.ldon_losses_mir;
-	case LDoNThemes::MMC:
-		return m_pp.ldon_losses_mmc;
-	case LDoNThemes::RUJ:
-		return m_pp.ldon_losses_ruj;
-	case LDoNThemes::TAK:
-		return m_pp.ldon_losses_tak;
-	default:
-		return 0;
-	}
-}
-
-void Client::UpdateLDoNWinLoss(uint32 theme_id, bool win, bool remove) {
-	switch (theme_id) {
-		case LDoNThemes::GUK:
-			if (win) {
-				m_pp.ldon_wins_guk += (remove ? -1 : 1);
-			} else {
-				m_pp.ldon_losses_guk += (remove ? -1 : 1);
-			}
-			break;
-		case LDoNThemes::MIR:
-			if (win) {
-				m_pp.ldon_wins_mir += (remove ? -1 : 1);
-			} else {
-				m_pp.ldon_losses_mir += (remove ? -1 : 1);
-			}
-			break;
-		case LDoNThemes::MMC:
-			if (win) {
-				m_pp.ldon_wins_mmc += (remove ? -1 : 1);
-			} else {
-				m_pp.ldon_losses_mmc += (remove ? -1 : 1);
-			}
-			break;
-		case LDoNThemes::RUJ:
-			if (win) {
-				m_pp.ldon_wins_ruj += (remove ? -1 : 1);
-			} else {
-				m_pp.ldon_losses_ruj += (remove ? -1 : 1);
-			}
-			break;
-		case LDoNThemes::TAK:
-			if (win) {
-				m_pp.ldon_wins_tak += (remove ? -1 : 1);
-			} else {
-				m_pp.ldon_losses_tak += (remove ? -1 : 1);
-			}
-			break;
-		default:
-			return;
-	}
-	database.UpdateAdventureStatsEntry(CharacterID(), theme_id, win, remove);
-}
-
-
 void Client::SuspendMinion(int value)
 {
 	/*
@@ -5954,44 +5435,6 @@ void Client::ProcessInspectRequest(Client* requestee, Client* requester) {
 	}
 }
 
-void Client::GuildBankAck()
-{
-	auto outapp = new EQApplicationPacket(OP_GuildBank, sizeof(GuildBankAck_Struct));
-
-	GuildBankAck_Struct *gbas = (GuildBankAck_Struct*) outapp->pBuffer;
-
-	gbas->Action = GuildBankAcknowledge;
-
-	FastQueuePacket(&outapp);
-}
-
-void Client::GuildBankDepositAck(bool Fail, int8 action)
-{
-
-	auto outapp = new EQApplicationPacket(OP_GuildBank, sizeof(GuildBankDepositAck_Struct));
-
-	GuildBankDepositAck_Struct *gbdas = (GuildBankDepositAck_Struct*) outapp->pBuffer;
-
-	gbdas->Action = action;
-
-	gbdas->Fail = Fail ? 1 : 0;
-
-	FastQueuePacket(&outapp);
-}
-
-void Client::ClearGuildBank()
-{
-	auto outapp = new EQApplicationPacket(OP_GuildBank, sizeof(GuildBankClear_Struct));
-
-	GuildBankClear_Struct *gbcs = (GuildBankClear_Struct*) outapp->pBuffer;
-
-	gbcs->Action = GuildBankBulkItems;
-	gbcs->DepositAreaCount = 0;
-	gbcs->MainAreaCount = 0;
-
-	FastQueuePacket(&outapp);
-}
-
 void Client::SendGroupCreatePacket()
 {
 	// For SoD and later clients, this is sent the Group Leader upon initial creation of the group
@@ -6038,211 +5481,6 @@ void Client::SendGroupJoinAcknowledge()
 	FastQueuePacket(&outapp);
 }
 
-void Client::SendAdventureError(const char *error)
-{
-	size_t error_size = strlen(error);
-	auto outapp = new EQApplicationPacket(OP_AdventureInfo, (error_size + 2));
-	strn0cpy((char*)outapp->pBuffer, error, error_size);
-	FastQueuePacket(&outapp);
-}
-
-void Client::SendAdventureDetails()
-{
-	if(adv_data)
-	{
-		ServerSendAdventureData_Struct *ad = (ServerSendAdventureData_Struct*)adv_data;
-		auto outapp = new EQApplicationPacket(OP_AdventureData, sizeof(AdventureRequestResponse_Struct));
-		AdventureRequestResponse_Struct *arr = (AdventureRequestResponse_Struct*)outapp->pBuffer;
-		arr->unknown000 = 0xBFC40100;
-		arr->unknown2080 = 0x0A;
-		arr->risk = ad->risk;
-		strcpy(arr->text, ad->text);
-
-		if(ad->time_to_enter != 0)
-		{
-			arr->timetoenter = ad->time_to_enter;
-		}
-		else
-		{
-			arr->timeleft = ad->time_left;
-		}
-
-		if(ad->zone_in_id == zone->GetZoneID())
-		{
-			arr->y = ad->x;
-			arr->x = ad->y;
-			arr->showcompass = 1;
-		}
-		FastQueuePacket(&outapp);
-
-		SendAdventureCount(ad->count, ad->total);
-	}
-	else
-	{
-		ServerSendAdventureData_Struct *ad = (ServerSendAdventureData_Struct*)adv_data;
-		auto outapp = new EQApplicationPacket(OP_AdventureData, sizeof(AdventureRequestResponse_Struct));
-		FastQueuePacket(&outapp);
-	}
-}
-
-void Client::SendAdventureCount(uint32 count, uint32 total)
-{
-	auto outapp = new EQApplicationPacket(OP_AdventureUpdate, sizeof(AdventureCountUpdate_Struct));
-	AdventureCountUpdate_Struct *acu = (AdventureCountUpdate_Struct*)outapp->pBuffer;
-	acu->current = count;
-	acu->total = total;
-	FastQueuePacket(&outapp);
-}
-
-void Client::NewAdventure(int id, int theme, const char *text, int member_count, const char *members)
-{
-	size_t text_size = strlen(text);
-	auto outapp = new EQApplicationPacket(OP_AdventureDetails, text_size + 2);
-	strn0cpy((char*)outapp->pBuffer, text, text_size);
-	FastQueuePacket(&outapp);
-
-	adv_requested_id = id;
-	adv_requested_theme = theme;
-	safe_delete_array(adv_requested_data);
-	adv_requested_member_count = member_count;
-	adv_requested_data = new char[64 * member_count];
-	memcpy(adv_requested_data, members, (64 * member_count));
-}
-
-void Client::ClearPendingAdventureData()
-{
-	adv_requested_id = 0;
-	adv_requested_theme = LDoNThemes::Unused;
-	safe_delete_array(adv_requested_data);
-	adv_requested_member_count = 0;
-}
-
-bool Client::IsOnAdventure()
-{
-	if(adv_data)
-	{
-		ServerSendAdventureData_Struct *ad = (ServerSendAdventureData_Struct*)adv_data;
-		if(ad->zone_in_id == 0)
-		{
-			return false;
-		}
-		else
-		{
-			return true;
-		}
-	}
-	return false;
-}
-
-void Client::LeaveAdventure()
-{
-	if(!GetPendingAdventureLeave())
-	{
-		PendingAdventureLeave();
-		auto pack = new ServerPacket(ServerOP_AdventureLeave, 64);
-		strcpy((char*)pack->pBuffer, GetName());
-		worldserver.SendPacket(pack);
-		delete pack;
-	}
-}
-
-void Client::ClearCurrentAdventure()
-{
-	if(adv_data)
-	{
-		ServerSendAdventureData_Struct* ds = (ServerSendAdventureData_Struct*)adv_data;
-		if(ds->finished_adventures > 0)
-		{
-			ds->instance_id = 0;
-			ds->risk = 0;
-			memset(ds->text, 0, 512);
-			ds->time_left = 0;
-			ds->time_to_enter = 0;
-			ds->x = 0;
-			ds->y = 0;
-			ds->zone_in_id = 0;
-			ds->zone_in_object = 0;
-		}
-		else
-		{
-			safe_delete(adv_data);
-		}
-
-		SendAdventureError("You are not currently assigned to an adventure.");
-	}
-}
-
-void Client::AdventureFinish(bool win, int theme, int points)
-{
-	UpdateLDoNPoints(theme, points);
-	auto outapp = new EQApplicationPacket(OP_AdventureFinish, sizeof(AdventureFinish_Struct));
-	AdventureFinish_Struct *af = (AdventureFinish_Struct*)outapp->pBuffer;
-	af->win_lose = win ? 1 : 0;
-	af->points = points;
-	FastQueuePacket(&outapp);
-}
-
-void Client::CheckLDoNHail(Mob *target)
-{
-	if(!zone->adv_data)
-	{
-		return;
-	}
-
-	if(!target || !target->IsNPC())
-	{
-		return;
-	}
-
-	if(target->GetOwnerID() != 0)
-	{
-		return;
-	}
-
-	ServerZoneAdventureDataReply_Struct* ds = (ServerZoneAdventureDataReply_Struct*)zone->adv_data;
-	if(ds->type != Adventure_Rescue)
-	{
-		return;
-	}
-
-	if(ds->data_id != target->GetNPCTypeID())
-	{
-		return;
-	}
-
-	if(entity_list.CheckNPCsClose(target) != 0)
-	{
-		target->Say("You're here to save me? I couldn't possibly risk leaving yet. There are "
-			"far too many of those horrid things out there waiting to recapture me! Please get"
-			" rid of some more of those vermin and then we can try to leave.");
-		return;
-	}
-
-	Mob *pet = GetPet();
-	if(pet)
-	{
-		if(pet->GetPetType() == petCharmed)
-		{
-			pet->BuffFadeByEffect(SE_Charm);
-		}
-		else if(pet->GetPetType() == petNPCFollow)
-		{
-			pet->SetOwnerID(0);
-		}
-		else
-		{
-			pet->Depop();
-		}
-	}
-
-	SetPet(target);
-	target->SetOwnerID(GetID());
-	target->Say("Wonderful! Someone to set me free! I feared for my life for so long,"
-		" never knowing when they might choose to end my life. Now that you're here though"
-		" I can rest easy. Please help me find my way out of here as soon as you can"
-		" I'll stay close behind you!");
-}
-
 void Client::CheckEmoteHail(Mob *target, const char* message)
 {
 	if(
@@ -6266,16 +5504,6 @@ void Client::CheckEmoteHail(Mob *target, const char* message)
 	uint32 emoteid = target->GetEmoteID();
 	if(emoteid != 0)
 		target->CastToNPC()->DoNPCEmote(EQ::constants::EmoteEventTypes::Hailed, emoteid);
-}
-
-void Client::MarkSingleCompassLoc(float in_x, float in_y, float in_z, uint8 count)
-{
-	m_has_quest_compass = (count != 0);
-	m_quest_compass.x = in_x;
-	m_quest_compass.y = in_y;
-	m_quest_compass.z = in_z;
-
-	SendDzCompassUpdate();
 }
 
 void Client::SendZonePoints()
@@ -6322,7 +5550,6 @@ void Client::SendZonePoints()
 			zp->zpe[i].z = data->target_z;
 			zp->zpe[i].heading = data->target_heading;
 			zp->zpe[i].zoneid = data->target_zone_id;
-			zp->zpe[i].zoneinstance = data->target_zone_instance;
 			i++;
 		}
 		iterator.Advance();
@@ -6381,7 +5608,6 @@ void Client::NPCSpawn(NPC *target_npc, const char *identifier, uint32 extra)
 		content_db.NPCSpawnDB(
 			is_add ? NPCSpawnTypes::AddNewSpawngroup : NPCSpawnTypes::CreateNewSpawn,
 			zone->GetShortName(),
-			zone->GetInstanceVersion(),
 			this,
 			target_npc->CastToNPC(),
 			extra
@@ -6399,7 +5625,6 @@ void Client::NPCSpawn(NPC *target_npc, const char *identifier, uint32 extra)
 		content_db.NPCSpawnDB(
 			spawn_update_type,
 			zone->GetShortName(),
-			zone->GetInstanceVersion(),
 			this,
 			target_npc->CastToNPC()
 		);
@@ -6452,7 +5677,6 @@ void Client::ConsentCorpses(std::string consent_name, bool deny)
 		strn0cpy(scs->zonename, "Unknown", sizeof(scs->zonename));
 		scs->permission = deny ? 0 : 1;
 		scs->zone_id = zone->GetZoneID();
-		scs->instance_id = zone->GetInstanceID();
 		scs->consent_type = EQ::consent::Normal;
 		scs->consent_id = 0;
 		if (strcasecmp(scs->grantname, "group") == 0) {
@@ -6597,16 +5821,6 @@ void Client::Doppelganger(uint16 spell_id, Mob *target, const char *name_overrid
 	}
 
 	safe_delete(made_npc);
-}
-
-void Client::AssignToInstance(uint16 instance_id)
-{
-	database.AddClientToInstance(instance_id, CharacterID());
-}
-
-void Client::RemoveFromInstance(uint16 instance_id)
-{
-	database.RemoveClientFromInstance(instance_id, CharacterID());
 }
 
 void Client::SendStatsWindow(Client* client, bool use_window)
@@ -7190,7 +6404,7 @@ void Client::AddAlternateCurrencyValue(uint32 currency_id, int32 amount, int8 me
 	if (method == 1){
 		/* QS: PlayerLogAlternateCurrencyTransactions :: Cursor to Item Storage */
 		if (RuleB(QueryServ, PlayerLogAlternateCurrencyTransactions)){
-			std::string event_desc = StringFormat("Added via Quest :: Cursor to Item :: alt_currency_id:%i amount:%i in zoneid:%i instid:%i", currency_id, GetZoneID(), GetInstanceID());
+			std::string event_desc = StringFormat("Added via Quest :: Cursor to Item :: alt_currency_id:%i amount:%i in zoneid:%i", currency_id, GetZoneID());
 			QServ->PlayerLogEvent(Player_Log_Alternate_Currency_Transactions, CharacterID(), event_desc);
 		}
 	}
@@ -8491,7 +7705,7 @@ void Client::SendItemScale(EQ::ItemInstance *inst) {
 	}
 }
 
-void Client::AddRespawnOption(std::string option_name, uint32 zoneid, uint16 instance_id, float x, float y, float z, float heading, bool initial_selection, int8 position)
+void Client::AddRespawnOption(std::string option_name, uint32 zoneid, float x, float y, float z, float heading, bool initial_selection, int8 position)
 {
 	//If respawn window is already open, any changes would create an inconsistency with the client
 	if (IsHoveringForRespawn()) { return; }
@@ -8503,7 +7717,6 @@ void Client::AddRespawnOption(std::string option_name, uint32 zoneid, uint16 ins
 	RespawnOption res_opt;
 	res_opt.name = option_name;
 	res_opt.zone_id = zoneid;
-	res_opt.instance_id = instance_id;
 	res_opt.x = x;
 	res_opt.y = y;
 	res_opt.z = z;
@@ -8734,40 +7947,6 @@ void Client::PlayMP3(const char* fname)
 	strncpy(buf->filename, fname, filename.length());
 	QueuePacket(outapp);
 	safe_delete(outapp);
-}
-
-void Client::ExpeditionSay(const char *str, int ExpID) {
-
-	std::string query = StringFormat("SELECT `player_name` FROM `cust_inst_players` "
-									"WHERE `inst_id` = %i", ExpID);
-	auto results = database.QueryDatabase(query);
-	if (!results.Success())
-		return;
-
-	if(results.RowCount() == 0) {
-		Message(Chat::Lime, "You say to the expedition, '%s'", str);
-		return;
-	}
-
-	for(auto row = results.begin(); row != results.end(); ++row) {
-		const char* charName = row[0];
-		if(strcmp(charName, GetCleanName()) != 0) {
-			worldserver.SendEmoteMessage(
-				charName,
-				0,
-				AccountStatus::Player,
-				Chat::Lime,
-				fmt::format(
-					"{} says to the expedition, '{}'",
-					GetCleanName(),
-					str
-				).c_str()
-			);
-		}
-		// ChannelList->CreateChannel(ChannelName, ChannelOwner, ChannelPassword, true, atoi(row[3]));
-	}
-
-
 }
 
 void Client::ShowNumHits()
@@ -9508,16 +8687,7 @@ bool Client::GotoPlayer(std::string player_name)
 	);
 
 	for (auto &c: characters) {
-		if (c.zone_instance > 0 && !database.CheckInstanceExists(c.zone_instance)) {
-			Message(Chat::Yellow, "Instance no longer exists...");
-			return false;
-		}
-
-		if (c.zone_instance > 0) {
-			database.AddClientToInstance(c.zone_instance, CharacterID());
-		}
-
-		MovePC(c.zone_id, c.zone_instance, c.x, c.y, c.z, c.heading);
+		MovePC(c.zone_id, c.x, c.y, c.z, c.heading);
 
 		return true;
 	}
@@ -9574,44 +8744,6 @@ void Client::SetLastPositionBeforeBulkUpdate(glm::vec4 in_last_position_before_b
 	Client::last_position_before_bulk_update = in_last_position_before_bulk_update;
 }
 
-void Client::SendToGuildHall()
-{
-	std::string zone_short_name = "guildhall";
-	uint32      zone_id         = ZoneID(zone_short_name.c_str());
-	if (zone_id == 0) {
-		return;
-	}
-
-	uint32      expiration_time         = (RuleI(Instances, GuildHallExpirationDays) * 86400);
-	uint16      instance_id             = 0;
-	std::string guild_hall_instance_key = fmt::format("guild-hall-instance-{}", GuildID());
-	std::string instance_data           = DataBucket::GetData(guild_hall_instance_key);
-	if (!instance_data.empty() && std::stoi(instance_data) > 0) {
-		instance_id = std::stoi(instance_data);
-	}
-
-	if (instance_id <= 0) {
-		if (!database.GetUnusedInstanceID(instance_id)) {
-			Message(Chat::Red, "Server was unable to find a free instance id.");
-			return;
-		}
-
-		if (!database.CreateInstance(instance_id, zone_id, 1, expiration_time)) {
-			Message(Chat::Red, "Server was unable to create a new instance.");
-			return;
-		}
-
-		DataBucket::SetData(
-			guild_hall_instance_key,
-			std::to_string(instance_id),
-			std::to_string(expiration_time)
-		);
-	}
-
-	AssignToInstance(instance_id);
-	MovePC(345, instance_id, -1.00, -1.00, 3.34, 0, 1);
-}
-
 void Client::CheckVirtualZoneLines()
 {
 	for (auto &virtual_zone_point : zone->virtual_zone_point_list) {
@@ -9628,7 +8760,6 @@ void Client::CheckVirtualZoneLines()
 
 			MovePC(
 				virtual_zone_point.target_zone_id,
-				virtual_zone_point.target_instance,
 				virtual_zone_point.target_x,
 				virtual_zone_point.target_y,
 				virtual_zone_point.target_z,
@@ -9701,7 +8832,6 @@ void Client::ShowDevToolsMenu()
 
 	menu_reload_seven += Saylink::Silent("#reload rules", "Rules");
 	menu_reload_seven += " | " + Saylink::Silent("#reload static", "Static Zone Data");
-	menu_reload_seven += " | " + Saylink::Silent("#reload tasks", "Tasks");
 
 	menu_reload_eight += Saylink::Silent("#reload titles", "Titles");
 	menu_reload_eight += " | " + Saylink::Silent("#reload traps 1", "Traps");
@@ -9927,557 +9057,6 @@ void Client::SendCrossZoneMessageString(
 	}
 }
 
-void Client::SendDynamicZoneUpdates()
-{
-	// bit inefficient since each do lookups but it avoids duplicating code here
-	SendDzCompassUpdate();
-	SetDynamicZoneMemberStatus(DynamicZoneMemberStatus::Online);
-
-	m_expedition_lockouts = ExpeditionDatabase::LoadCharacterLockouts(CharacterID());
-
-	// expeditions are the only dz type that keep the window updated
-	auto expedition = GetExpedition();
-	if (expedition)
-	{
-		expedition->GetDynamicZone()->SendClientWindowUpdate(this);
-
-		// live synchronizes lockouts obtained during the active expedition to
-		// members once they zone into the expedition's dynamic zone instance
-		if (expedition->GetDynamicZone()->IsCurrentZoneDzInstance())
-		{
-			expedition->SyncCharacterLockouts(CharacterID(), m_expedition_lockouts);
-		}
-	}
-
-	SendExpeditionLockoutTimers();
-
-	// ask world for any pending invite we saved from a previous zone
-	RequestPendingExpeditionInvite();
-}
-
-Expedition* Client::CreateExpedition(DynamicZone& dz, bool disable_messages)
-{
-	return Expedition::TryCreate(this, dz, disable_messages);
-}
-
-Expedition* Client::CreateExpedition(
-	const std::string& zone_name, uint32 version, uint32 duration, const std::string& expedition_name,
-	uint32 min_players, uint32 max_players, bool disable_messages)
-{
-	DynamicZone dz{ ZoneID(zone_name), version, duration, DynamicZoneType::Expedition };
-	dz.SetName(expedition_name);
-	dz.SetMinPlayers(min_players);
-	dz.SetMaxPlayers(max_players);
-
-	return Expedition::TryCreate(this, dz, disable_messages);
-}
-
-Expedition* Client::CreateExpeditionFromTemplate(uint32_t dz_template_id)
-{
-	Expedition* expedition = nullptr;
-	auto it = zone->dz_template_cache.find(dz_template_id);
-	if (it != zone->dz_template_cache.end())
-	{
-		DynamicZone dz(DynamicZoneType::Expedition);
-		dz.LoadTemplate(it->second);
-		expedition = Expedition::TryCreate(this, dz, false);
-	}
-	return expedition;
-}
-
-void Client::CreateTaskDynamicZone(int task_id, DynamicZone& dz_request)
-{
-	if (task_state)
-	{
-		task_state->CreateTaskDynamicZone(this, task_id, dz_request);
-	}
-}
-
-Expedition* Client::GetExpedition() const
-{
-	if (zone && m_expedition_id)
-	{
-		auto expedition_cache_iter = zone->expedition_cache.find(m_expedition_id);
-		if (expedition_cache_iter != zone->expedition_cache.end())
-		{
-			return expedition_cache_iter->second.get();
-		}
-	}
-	return nullptr;
-}
-
-void Client::AddExpeditionLockout(const ExpeditionLockoutTimer& lockout, bool update_db)
-{
-	// todo: support for account based lockouts like live AoC expeditions
-
-	// if client already has this lockout, we're replacing it with the new one
-	m_expedition_lockouts.erase(std::remove_if(m_expedition_lockouts.begin(), m_expedition_lockouts.end(),
-		[&](const ExpeditionLockoutTimer& existing_lockout) {
-			return existing_lockout.IsSameLockout(lockout);
-		}
-	), m_expedition_lockouts.end());
-
-	m_expedition_lockouts.emplace_back(lockout);
-
-	if (update_db) // for quest api
-	{
-		ExpeditionDatabase::InsertCharacterLockouts(CharacterID(), { lockout });
-	}
-
-	SendExpeditionLockoutTimers();
-}
-
-void Client::AddNewExpeditionLockout(
-	const std::string& expedition_name, const std::string& event_name, uint32_t seconds, std::string uuid)
-{
-	auto lockout = ExpeditionLockoutTimer::CreateLockout(expedition_name, event_name, seconds, uuid);
-	AddExpeditionLockout(lockout, true);
-}
-
-void Client::AddExpeditionLockoutDuration(
-	const std::string& expedition_name, const std::string& event_name, int seconds,
-	const std::string& uuid, bool update_db)
-{
-	auto it = std::find_if(m_expedition_lockouts.begin(), m_expedition_lockouts.end(),
-		[&](const ExpeditionLockoutTimer& lockout) {
-			return lockout.IsSameLockout(expedition_name, event_name);
-		});
-
-	if (it != m_expedition_lockouts.end())
-	{
-		it->AddLockoutTime(seconds);
-
-		if (!uuid.empty())
-		{
-			it->SetUUID(uuid);
-		}
-
-		if (update_db)
-		{
-			ExpeditionDatabase::InsertCharacterLockouts(CharacterID(), { *it });
-		}
-
-		SendExpeditionLockoutTimers();
-	}
-	else if (seconds > 0) // missing lockouts inserted for reductions would be instantly expired
-	{
-		auto lockout = ExpeditionLockoutTimer::CreateLockout(expedition_name, event_name, seconds, uuid);
-		AddExpeditionLockout(lockout, update_db);
-	}
-}
-
-void Client::RemoveExpeditionLockout(
-	const std::string& expedition_name, const std::string& event_name, bool update_db)
-{
-	m_expedition_lockouts.erase(std::remove_if(m_expedition_lockouts.begin(), m_expedition_lockouts.end(),
-		[&](const ExpeditionLockoutTimer& lockout) {
-			return lockout.IsSameLockout(expedition_name, event_name);
-		}
-	), m_expedition_lockouts.end());
-
-	if (update_db) // for quest api
-	{
-		ExpeditionDatabase::DeleteCharacterLockout(CharacterID(), expedition_name, event_name);
-	}
-
-	SendExpeditionLockoutTimers();
-}
-
-void Client::RemoveAllExpeditionLockouts(const std::string& expedition_name, bool update_db)
-{
-	if (expedition_name.empty())
-	{
-		if (update_db)
-		{
-			ExpeditionDatabase::DeleteAllCharacterLockouts(CharacterID());
-		}
-		m_expedition_lockouts.clear();
-	}
-	else
-	{
-		if (update_db)
-		{
-			ExpeditionDatabase::DeleteAllCharacterLockouts(CharacterID(), expedition_name);
-		}
-
-		m_expedition_lockouts.erase(std::remove_if(m_expedition_lockouts.begin(), m_expedition_lockouts.end(),
-			[&](const ExpeditionLockoutTimer& lockout) {
-				return lockout.GetExpeditionName() == expedition_name;
-			}
-		), m_expedition_lockouts.end());
-	}
-
-	SendExpeditionLockoutTimers();
-}
-
-const ExpeditionLockoutTimer* Client::GetExpeditionLockout(
-	const std::string& expedition_name, const std::string& event_name, bool include_expired) const
-{
-	for (const auto& expedition_lockout : m_expedition_lockouts)
-	{
-		if ((include_expired || !expedition_lockout.IsExpired()) &&
-		    expedition_lockout.IsSameLockout(expedition_name, event_name))
-		{
-			return &expedition_lockout;
-		}
-	}
-	return nullptr;
-}
-
-std::vector<ExpeditionLockoutTimer> Client::GetExpeditionLockouts(
-	const std::string& expedition_name, bool include_expired)
-{
-	std::vector<ExpeditionLockoutTimer> lockouts;
-	for (const auto& lockout : m_expedition_lockouts)
-	{
-		if ((include_expired || !lockout.IsExpired()) &&
-		    lockout.GetExpeditionName() == expedition_name)
-		{
-			lockouts.emplace_back(lockout);
-		}
-	}
-	return lockouts;
-}
-
-bool Client::HasExpeditionLockout(
-	const std::string& expedition_name, const std::string& event_name, bool include_expired)
-{
-	return (GetExpeditionLockout(expedition_name, event_name, include_expired) != nullptr);
-}
-
-void Client::SendExpeditionLockoutTimers()
-{
-	std::vector<ExpeditionLockoutTimerEntry_Struct> lockout_entries;
-
-	// client displays lockouts rounded down to nearest minute, send lockouts
-	// with 60s offset added to compensate (live does this too)
-	constexpr uint32_t rounding_seconds = 60;
-
-	// erases expired lockouts while building lockout timer list
-	for (auto it = m_expedition_lockouts.begin(); it != m_expedition_lockouts.end();)
-	{
-		uint32_t seconds_remaining = it->GetSecondsRemaining();
-		if (seconds_remaining == 0)
-		{
-			it = m_expedition_lockouts.erase(it);
-		}
-		else
-		{
-			ExpeditionLockoutTimerEntry_Struct lockout;
-			strn0cpy(lockout.expedition_name, it->GetExpeditionName().c_str(), sizeof(lockout.expedition_name));
-			lockout.seconds_remaining = seconds_remaining + rounding_seconds;
-			lockout.event_type = it->IsReplayTimer() ? Expedition::REPLAY_TIMER_ID : Expedition::EVENT_TIMER_ID;
-			strn0cpy(lockout.event_name, it->GetEventName().c_str(), sizeof(lockout.event_name));
-
-			lockout_entries.emplace_back(lockout);
-			++it;
-		}
-	}
-
-	uint32_t lockout_count = static_cast<uint32_t>(lockout_entries.size());
-	uint32_t lockout_entries_size = sizeof(ExpeditionLockoutTimerEntry_Struct) * lockout_count;
-	uint32_t outsize = sizeof(ExpeditionLockoutTimers_Struct) + lockout_entries_size;
-	auto outapp = std::make_unique<EQApplicationPacket>(OP_DzExpeditionLockoutTimers, outsize);
-	auto outbuf = reinterpret_cast<ExpeditionLockoutTimers_Struct*>(outapp->pBuffer);
-	outbuf->count = lockout_count;
-	if (!lockout_entries.empty())
-	{
-		memcpy(outbuf->timers, lockout_entries.data(), lockout_entries_size);
-	}
-	QueuePacket(outapp.get());
-}
-
-void Client::RequestPendingExpeditionInvite()
-{
-	uint32_t packsize = sizeof(ServerExpeditionCharacterID_Struct);
-	auto pack = std::make_unique<ServerPacket>(ServerOP_ExpeditionRequestInvite, packsize);
-	auto packbuf = reinterpret_cast<ServerExpeditionCharacterID_Struct*>(pack->pBuffer);
-	packbuf->character_id = CharacterID();
-	worldserver.SendPacket(pack.get());
-}
-
-void Client::DzListTimers()
-{
-	// only lists player's current replay timer lockouts, not all event lockouts
-	bool found = false;
-	for (const auto& lockout : m_expedition_lockouts)
-	{
-		if (lockout.IsReplayTimer())
-		{
-			found = true;
-			auto time_remaining = lockout.GetDaysHoursMinutesRemaining();
-			MessageString(
-				Chat::Yellow, DZLIST_REPLAY_TIMER,
-				time_remaining.days.c_str(),
-				time_remaining.hours.c_str(),
-				time_remaining.mins.c_str(),
-				lockout.GetExpeditionName().c_str()
-			);
-		}
-	}
-
-	if (!found)
-	{
-		MessageString(Chat::Yellow, EXPEDITION_NO_TIMERS);
-	}
-}
-
-void Client::SetDzRemovalTimer(bool enable_timer)
-{
-	uint32_t timer_ms = RuleI(DynamicZone, ClientRemovalDelayMS);
-
-	LogDynamicZones(
-		"Character [{}] instance [{}] removal timer enabled: [{}] delay (ms): [{}]",
-		CharacterID(), zone ? zone->GetInstanceID() : 0, enable_timer, timer_ms
-	);
-
-	if (enable_timer)
-	{
-		dynamiczone_removal_timer.Start(timer_ms);
-	}
-	else
-	{
-		dynamiczone_removal_timer.Disable();
-	}
-}
-
-void Client::SendDzCompassUpdate()
-{
-	// client may be associated with multiple dynamic zone compasses in this zone
-	std::vector<DynamicZoneCompassEntry_Struct> compass_entries;
-
-	// need to sort by local doorid in case multiple have same dz switch id (live only sends first)
-	// todo: just store zone's door list ordered and ditch this
-	std::vector<Doors*> switches;
-	switches.reserve(entity_list.GetDoorsList().size());
-	for (const auto& door_pair : entity_list.GetDoorsList())
-	{
-		switches.push_back(door_pair.second);
-	}
-	std::sort(switches.begin(), switches.end(),
-		[](Doors* lhs, Doors* rhs) { return lhs->GetDoorID() < rhs->GetDoorID(); });
-
-	for (const auto& client_dz : GetDynamicZones())
-	{
-		auto compass = client_dz->GetCompassLocation();
-		if (zone && zone->IsZone(compass.zone_id, 0))
-		{
-			DynamicZoneCompassEntry_Struct entry{};
-			entry.dz_zone_id = client_dz->GetZoneID();
-			entry.dz_instance_id = client_dz->GetInstanceID();
-			entry.dz_type = static_cast<uint32_t>(client_dz->GetType());
-			entry.x = compass.x;
-			entry.y = compass.y;
-			entry.z = compass.z;
-
-			compass_entries.emplace_back(entry);
-		}
-
-		// if client has a dz with a switch id add compass to any switch locs that share it
-		if (client_dz->GetSwitchID() != 0)
-		{
-			// live only sends one if multiple in zone have the same switch id
-			auto it = std::find_if(switches.begin(), switches.end(),
-				[&](const auto& eqswitch) {
-					return eqswitch->GetDzSwitchID() == client_dz->GetSwitchID();
-				});
-
-			if (it != switches.end())
-			{
-				DynamicZoneCompassEntry_Struct entry{};
-				entry.dz_zone_id = client_dz->GetZoneID();
-				entry.dz_instance_id = client_dz->GetInstanceID();
-				entry.dz_type = static_cast<uint32_t>(client_dz->GetType());
-				entry.dz_switch_id = client_dz->GetSwitchID();
-				entry.x = (*it)->GetX();
-				entry.y = (*it)->GetY();
-				entry.z = (*it)->GetZ();
-
-				compass_entries.emplace_back(entry);
-			}
-		}
-	}
-
-	// compass set via MarkSingleCompassLocation()
-	if (m_has_quest_compass)
-	{
-		DynamicZoneCompassEntry_Struct entry{};
-		entry.dz_zone_id = 0;
-		entry.dz_instance_id = 0;
-		entry.dz_type = 0;
-		entry.x = m_quest_compass.x;
-		entry.y = m_quest_compass.y;
-		entry.z = m_quest_compass.z;
-
-		compass_entries.emplace_back(entry);
-	}
-
-	QueuePacket(CreateCompassPacket(compass_entries).get());
-}
-
-std::unique_ptr<EQApplicationPacket> Client::CreateCompassPacket(
-	const std::vector<DynamicZoneCompassEntry_Struct>& compass_entries)
-{
-	uint32 count = static_cast<uint32_t>(compass_entries.size());
-	uint32 entries_size = sizeof(DynamicZoneCompassEntry_Struct) * count;
-	uint32 outsize = sizeof(DynamicZoneCompass_Struct) + entries_size;
-	auto outapp = std::make_unique<EQApplicationPacket>(OP_DzCompass, outsize);
-	auto outbuf = reinterpret_cast<DynamicZoneCompass_Struct*>(outapp->pBuffer);
-	outbuf->count = count;
-	memcpy(outbuf->entries, compass_entries.data(), entries_size);
-
-	return outapp;
-}
-
-void Client::GoToDzSafeReturnOrBind(const DynamicZone* dynamic_zone)
-{
-	if (dynamic_zone)
-	{
-		auto safereturn = dynamic_zone->GetSafeReturnLocation();
-		if (safereturn.zone_id != 0)
-		{
-			LogDynamicZonesDetail("Sending [{}] to safereturn zone [{}]", CharacterID(), safereturn.zone_id);
-			MovePC(safereturn.zone_id, 0, safereturn.x, safereturn.y, safereturn.z, safereturn.heading);
-			return;
-		}
-	}
-
-	GoToBind();
-}
-
-void Client::AddDynamicZoneID(uint32_t dz_id)
-{
-	auto it = std::find_if(m_dynamic_zone_ids.begin(), m_dynamic_zone_ids.end(),
-		[&](uint32_t current_dz_id) { return current_dz_id == dz_id; });
-
-	if (it == m_dynamic_zone_ids.end())
-	{
-		LogDynamicZonesDetail("Adding dz [{}] to client [{}]", dz_id, GetName());
-		m_dynamic_zone_ids.push_back(dz_id);
-	}
-}
-
-void Client::RemoveDynamicZoneID(uint32_t dz_id)
-{
-	LogDynamicZonesDetail("Removing dz [{}] from client [{}]", dz_id, GetName());
-	m_dynamic_zone_ids.erase(std::remove_if(m_dynamic_zone_ids.begin(), m_dynamic_zone_ids.end(),
-		[&](uint32_t current_dz_id) { return current_dz_id == dz_id; }
-	), m_dynamic_zone_ids.end());
-}
-
-std::vector<DynamicZone*> Client::GetDynamicZones(uint32_t zone_id, int zone_version)
-{
-	std::vector<DynamicZone*> client_dzs;
-
-	for (uint32_t dz_id : m_dynamic_zone_ids)
-	{
-		auto dz = DynamicZone::FindDynamicZoneByID(dz_id);
-		if (dz &&
-		   (zone_id == 0 || dz->GetZoneID() == zone_id) &&
-		   (zone_version < 0 || dz->GetZoneVersion() == zone_version))
-		{
-			client_dzs.emplace_back(dz);
-		}
-	}
-
-	return client_dzs;
-}
-
-void Client::SetDynamicZoneMemberStatus(DynamicZoneMemberStatus status)
-{
-	// sets status on all associated dzs client may have. if client is online
-	// inside a dz, only that dz has the "In Dynamic Zone" status set
-	for (auto& dz : GetDynamicZones())
-	{
-		// the rule to disable this status is handled internally by the dz
-		if (status == DynamicZoneMemberStatus::Online && dz->IsCurrentZoneDzInstance())
-		{
-			status = DynamicZoneMemberStatus::InDynamicZone;
-		}
-		dz->SetMemberStatus(CharacterID(), status);
-	}
-}
-
-void Client::MovePCDynamicZone(uint32 zone_id, int zone_version, bool msg_if_invalid)
-{
-	if (zone_id == 0)
-	{
-		return;
-	}
-
-	auto client_dzs = GetDynamicZones(zone_id, zone_version);
-
-	if (client_dzs.empty())
-	{
-		if (msg_if_invalid)
-		{
-			MessageString(Chat::Red, DYNAMICZONE_WAY_IS_BLOCKED); // unconfirmed message
-		}
-	}
-	else if (client_dzs.size() == 1)
-	{
-		auto dz = client_dzs.front();
-		DynamicZoneLocation zonein = dz->GetZoneInLocation();
-		ZoneMode zone_mode = dz->HasZoneInLocation() ? ZoneMode::ZoneSolicited : ZoneMode::ZoneToSafeCoords;
-		MovePC(zone_id, dz->GetInstanceID(), zonein.x, zonein.y, zonein.z, zonein.heading, 0, zone_mode);
-	}
-	else
-	{
-		LogDynamicZonesDetail("Sending DzSwitchListWnd to [{}] for zone [{}] with [{}] dynamic zone(s)",
-			CharacterID(), zone_id, client_dzs.size());
-
-		// client has more than one dz for this zone, send out the switchlist window
-		QueuePacket(CreateDzSwitchListPacket(client_dzs).get());
-	}
-}
-
-bool Client::TryMovePCDynamicZoneSwitch(int dz_switch_id)
-{
-	auto client_dzs = GetDynamicZones();
-
-	std::vector<DynamicZone*> switch_dzs;
-	auto it = std::copy_if(client_dzs.begin(), client_dzs.end(), std::back_inserter(switch_dzs),
-		[&](const DynamicZone* dz) { return dz->GetSwitchID() == dz_switch_id; });
-
-	if (switch_dzs.size() == 1)
-	{
-		LogDynamicZonesDetail("Moving client [{}] to dz with switch id [{}]", GetName(), dz_switch_id);
-		switch_dzs.front()->MovePCInto(this, true);
-	}
-	else if (switch_dzs.size() > 1)
-	{
-		QueuePacket(CreateDzSwitchListPacket(switch_dzs).get());
-	}
-
-	return !switch_dzs.empty();
-}
-
-std::unique_ptr<EQApplicationPacket> Client::CreateDzSwitchListPacket(
-	const std::vector<DynamicZone*>& client_dzs)
-{
-	uint32 count = static_cast<uint32_t>(client_dzs.size());
-	uint32 entries_size = sizeof(DynamicZoneChooseZoneEntry_Struct) * count;
-	uint32 outsize = sizeof(DynamicZoneChooseZone_Struct) + entries_size;
-	auto outapp = std::make_unique<EQApplicationPacket>(OP_DzChooseZone, outsize);
-	auto outbuf = reinterpret_cast<DynamicZoneChooseZone_Struct*>(outapp->pBuffer);
-	outbuf->count = count;
-	for (int i = 0; i < client_dzs.size(); ++i)
-	{
-		outbuf->choices[i].dz_zone_id = client_dzs[i]->GetZoneID();
-		outbuf->choices[i].dz_instance_id = client_dzs[i]->GetInstanceID();
-		outbuf->choices[i].dz_type = static_cast<uint32_t>(client_dzs[i]->GetType());
-		strn0cpy(outbuf->choices[i].description, client_dzs[i]->GetName().c_str(), sizeof(outbuf->choices[i].description));
-		strn0cpy(outbuf->choices[i].leader_name, client_dzs[i]->GetLeaderName().c_str(), sizeof(outbuf->choices[i].leader_name));
-	}
-	return outapp;
-}
-
-void Client::MovePCDynamicZone(const std::string& zone_name, int zone_version, bool msg_if_invalid)
-{
-	auto zone_id = ZoneID(zone_name.c_str());
-	MovePCDynamicZone(zone_id, zone_version, msg_if_invalid);
-}
-
 void Client::Fling(float value, float target_x, float target_y, float target_z, bool ignore_los, bool clipping) {
 	BuffFadeByEffect(SE_Levitate);
 	if (CheckLosFN(target_x, target_y, target_z, 6.0f) || ignore_los) {
@@ -10672,53 +9251,6 @@ void Client::SetAFK(uint8 afk_flag) {
 	spawn_appearance->parameter = afk_flag;
 	entity_list.QueueClients(this, outapp);
 	safe_delete(outapp);
-}
-
-void Client::SendToInstance(std::string instance_type, std::string zone_short_name, uint32 instance_version, float x, float y, float z, float heading, std::string instance_identifier, uint32 duration) {
-	uint32 zone_id = ZoneID(zone_short_name);
-	std::string current_instance_type = Strings::ToLower(instance_type);
-	std::string instance_type_name = "public";
-	if (current_instance_type.find("solo") != std::string::npos) {
-		instance_type_name = GetCleanName();
-	} else if (current_instance_type.find("group") != std::string::npos) {
-		uint32 group_id = (GetGroup() ? GetGroup()->GetID() : 0);
-		instance_type_name = itoa(group_id);
-	} else if (current_instance_type.find("raid") != std::string::npos) {
-		uint32 raid_id = (GetRaid() ? GetRaid()->GetID() : 0);
-		instance_type_name = itoa(raid_id);
-	} else if (current_instance_type.find("guild") != std::string::npos) {
-		uint32 guild_id = (GuildID() > 0 ? GuildID() : 0);
-		instance_type_name = itoa(guild_id);
-	}
-
-	std::string full_bucket_name = fmt::format(
-		"{}_{}_{}_{}",
-		current_instance_type,
-		instance_type_name,
-		instance_identifier,
-		zone_short_name
-	);
-	std::string current_bucket_value = DataBucket::GetData(full_bucket_name);
-	uint16 instance_id = 0;
-
-	if (current_bucket_value.length() > 0) {
-		instance_id = atoi(current_bucket_value.c_str());
-	} else {
-		if(!database.GetUnusedInstanceID(instance_id)) {
-			Message(Chat::White, "Server was unable to find a free instance id.");
-			return;
-		}
-
-		if(!database.CreateInstance(instance_id, zone_id, instance_version, duration)) {
-			Message(Chat::White, "Server was unable to create a new instance.");
-			return;
-		}
-
-		DataBucket::SetData(full_bucket_name, itoa(instance_id), itoa(duration));
-	}
-
-	AssignToInstance(instance_id);
-	MovePC(zone_id, instance_id, x, y, z, heading);
 }
 
 int Client::CountItem(uint32 item_id)
@@ -11487,9 +10019,6 @@ void Client::SendReloadCommandMessages() {
 		).c_str()
 	);
 
-	auto dztemplates_link = Saylink::Silent("#reload dztemplates");
-	Message(Chat::White, fmt::format("Usage: {} - Reloads Dynamic Zone Templates globally", dztemplates_link).c_str());
-
 	auto ground_spawns_link = Saylink::Silent("#reload ground_spawns");
 
 	Message(
@@ -11591,16 +10120,6 @@ void Client::SendReloadCommandMessages() {
 		fmt::format(
 			"Usage: {} - Reloads Static Zone Data globally",
 			static_link
-		).c_str()
-	);
-
-	auto tasks_link = Saylink::Silent("#reload tasks");
-
-	Message(
-		Chat::White,
-		fmt::format(
-			"Usage: {} [Task ID] - Reloads Tasks globally or by ID if specified",
-			tasks_link
 		).c_str()
 	);
 

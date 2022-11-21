@@ -2403,10 +2403,9 @@ void command_npcedit(Client *c, const Seperator *sep)
 					).c_str()
 				);
 				auto query = fmt::format(
-					"UPDATE spawn2 SET respawntime = {} WHERE spawngroupID = {} AND version = {}",
+					"UPDATE spawn2 SET respawntime = {} WHERE spawngroupID = {}",
 					respawn_time,
-					c->GetTarget()->CastToNPC()->GetSpawnGroupId(),
-					zone->GetInstanceVersion()
+					c->GetTarget()->CastToNPC()->GetSpawnGroupId()
 				);
 				content_db.QueryDatabase(query);
 			} else {

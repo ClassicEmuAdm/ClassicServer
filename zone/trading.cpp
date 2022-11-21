@@ -890,16 +890,6 @@ void Client::FinishTrade(Mob* tradingWith, bool finalizer, void* event_entry, st
 		// copy to be filtered by task updates, null trade slots preserved for quest event arg
 		std::vector<EQ::ItemInstance*> items(insts, insts + std::size(insts));
 
-		if (RuleB(TaskSystem, EnableTaskSystem)) {
-			if (UpdateTasksOnDeliver(items, *trade, tradingWith->CastToNPC())) {
-				if (!tradingWith->IsMoving())
-					tradingWith->FaceTarget(this);
-
-				EVENT_ITEM_ScriptStopReturn();
-
-			}
-		}
-
 		// todo: rule or npc field to auto return normal items also
 		if (!quest_npc)
 		{

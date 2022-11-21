@@ -43,8 +43,8 @@ public:
 	int GetHighestLevel();
 	int GetLowestLevel();
 	Lua_Client GetClientByIndex(int member_index);
-	void TeleportGroup(Lua_Mob sender, uint32 zone_id, uint32 instance_id, float x, float y, float z, float h, uint32 group_id);
-	void TeleportRaid(Lua_Mob sender, uint32 zone_id, uint32 instance_id, float x, float y, float z, float h);
+	void TeleportGroup(Lua_Mob sender, uint32 zone_id, float x, float y, float z, float h, uint32 group_id);
+	void TeleportRaid(Lua_Mob sender, uint32 zone_id, float x, float y, float z, float h);
 	int GetID();
 	Lua_Client GetMember(int member_index);
 	int GetGroupNumber(int member_index);

@@ -28,13 +28,10 @@ void command_viewzoneloot(Client *c, const Seperator *sep)
 		std::string npc_link;
 		if (current_npc) {
 			std::string npc_name     = current_npc->GetCleanName();
-			uint32      instance_id  = zone->GetInstanceID();
 			uint32      zone_id      = zone->GetZoneID();
 			std::string command_link = Saylink::Silent(
 				fmt::format(
-					"#{} {} {} {} {}",
-					(instance_id != 0 ? "zoneinstance" : "zone"),
-					(instance_id != 0 ? instance_id : zone_id),
+					"#{} {} {}",
 					current_npc->GetX(),
 					current_npc->GetY(),
 					current_npc->GetZ()

@@ -99,7 +99,7 @@ uint32_t Perl_Group_GetHighestLevel(Group* self) // @categories Script Utility, 
 
 void Perl_Group_TeleportGroup(Group* self, Mob* sender, uint32 zone_id, float x, float y, float z, float heading) // @categories Script Utility, Group
 {
-	self->TeleportGroup(sender, zone_id, 0, x, y, z, heading);
+	self->TeleportGroup(sender, zone_id, x, y, z, heading);
 }
 
 uint32_t Perl_Group_GetID(Group* self) // @categories Script Utility, Group
@@ -115,16 +115,6 @@ Client* Perl_Group_GetMember(Group* self, int member_index) // @categories Accou
 	}
 
 	return member ? member->CastToClient() : nullptr;
-}
-
-bool Perl_Group_DoesAnyMemberHaveExpeditionLockout(Group* self, std::string expedition_name, std::string event_name)
-{
-	return self->DoesAnyMemberHaveExpeditionLockout(expedition_name, event_name);
-}
-
-bool Perl_Group_DoesAnyMemberHaveExpeditionLockout(Group* self, std::string expedition_name, std::string event_name, int max_check_count)
-{
-	return self->DoesAnyMemberHaveExpeditionLockout(expedition_name, event_name, max_check_count);
 }
 
 uint32_t Perl_Group_GetLowestLevel(Group* self) // @categories Script Utility, Group
@@ -144,8 +134,6 @@ void perl_register_group()
 	auto package = perl.new_class<Group>("Group");
 	package.add("CastGroupSpell", &Perl_Group_CastGroupSpell);
 	package.add("DisbandGroup", &Perl_Group_DisbandGroup);
-	package.add("DoesAnyMemberHaveExpeditionLockout", (bool(*)(Group*, std::string, std::string))&Perl_Group_DoesAnyMemberHaveExpeditionLockout);
-	package.add("DoesAnyMemberHaveExpeditionLockout", (bool(*)(Group*, std::string, std::string, int))&Perl_Group_DoesAnyMemberHaveExpeditionLockout);
 	package.add("GetAverageLevel", &Perl_Group_GetAverageLevel);
 	package.add("GetHighestLevel", &Perl_Group_GetHighestLevel);
 	package.add("GetID", &Perl_Group_GetID);

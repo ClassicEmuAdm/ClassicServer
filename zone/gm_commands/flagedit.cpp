@@ -172,11 +172,10 @@ void command_flagedit(Client *c, const Seperator *sep)
 				SQL(
 					UPDATE zone
 					SET flag_needed = '{}'
-					WHERE zoneidnumber = {} AND version = {}
+					WHERE zoneidnumber = {}
 				),
 				flag_name,
-				zone_id,
-				zone->GetInstanceVersion()
+				zone_id
 			);
 
 			auto results = content_db.QueryDatabase(query);
@@ -245,10 +244,9 @@ void command_flagedit(Client *c, const Seperator *sep)
 				SQL(
 					UPDATE zone
 					SET flag_needed = ''
-					WHERE zoneidnumber = {} AND version = {}
+					WHERE zoneidnumber = {}
 				),
-				zone_id,
-				zone->GetInstanceVersion()
+				zone_id
 			);
 			auto results = content_db.QueryDatabase(query);
 			if (!results.Success()) {

@@ -373,50 +373,6 @@ NPC::NPC(const NPCType *npc_type_data, Spawn2 *in_respawn, const glm::vec4 &posi
 		}
 	}
 
-	ldon_trapped       = false;
-	ldon_trap_type     = 0;
-	ldon_spell_id      = 0;
-	ldon_locked        = false;
-	ldon_locked_skill  = 0;
-	ldon_trap_detected = false;
-
-	if (npc_type_data->trap_template > 0) {
-		std::map<uint32, std::list<LDoNTrapTemplate *> >::iterator trap_ent_iter;
-		std::list<LDoNTrapTemplate *>                              trap_list;
-
-		trap_ent_iter = zone->ldon_trap_entry_list.find(npc_type_data->trap_template);
-		if (trap_ent_iter != zone->ldon_trap_entry_list.end()) {
-			trap_list = trap_ent_iter->second;
-			if (trap_list.size() > 0) {
-				auto trap_list_iter = trap_list.begin();
-				std::advance(trap_list_iter, zone->random.Int(0, trap_list.size() - 1));
-				LDoNTrapTemplate *trap_template = (*trap_list_iter);
-				if (trap_template) {
-					if ((uint8) trap_template->spell_id > 0) {
-						ldon_trapped  = true;
-						ldon_spell_id = trap_template->spell_id;
-					}
-					else {
-						ldon_trapped  = false;
-						ldon_spell_id = 0;
-					}
-
-					ldon_trap_type     = (uint8) trap_template->type;
-					if (trap_template->locked > 0) {
-						ldon_locked       = true;
-						ldon_locked_skill = trap_template->skill;
-					}
-					else {
-						ldon_locked       = false;
-						ldon_locked_skill = 0;
-					}
-
-					ldon_trap_detected = 0;
-				}
-			}
-		}
-	}
-
 	reface_timer = new Timer(15000);
 	reface_timer->Disable();
 
@@ -972,27 +928,6 @@ bool NPC::Process()
 		}
 
 		SendHPUpdate();
-
-		if (zone->adv_data && !p_depop) {
-			ServerZoneAdventureDataReply_Struct *ds = (ServerZoneAdventureDataReply_Struct *) zone->adv_data;
-			if (ds->type == Adventure_Rescue && ds->data_id == GetNPCTypeID()) {
-				Mob *o = GetOwner();
-				if (o && o->IsClient()) {
-					float x_diff = ds->dest_x - GetX();
-					float y_diff = ds->dest_y - GetY();
-					float z_diff = ds->dest_z - GetZ();
-					float dist   = ((x_diff * x_diff) + (y_diff * y_diff) + (z_diff * z_diff));
-					if (dist < RuleR(Adventure, DistanceForRescueComplete)) {
-						zone->DoAdventureCountIncrease();
-						Say(
-							"You don't know what this means to me. Thank you so much for finding and saving me from"
-							" this wretched place. I'll find my way from here."
-						);
-						Depop();
-					}
-				}
-			}
-		}
 	}
 
 	/**
@@ -1466,7 +1401,6 @@ NPC* NPC::SpawnNPC(const char* spawncommand, const glm::vec4& position, Client* 
 
 uint32 ZoneDatabase::CreateNewNPCCommand(
 	const char *zone,
-	uint32 zone_version,
 	Client *client,
 	NPC *spawn,
 	uint32 extra
@@ -1542,9 +1476,9 @@ uint32 ZoneDatabase::CreateNewNPCCommand(
 	spawn->SetSpawnGroupId(spawngroupid);
 	spawn->SetNPCTypeID(npc_type_id);
 
-	query = StringFormat("INSERT INTO spawn2 (zone, version, x, y, z, respawntime, heading, spawngroupID) "
-			     "VALUES('%s', %u, %f, %f, %f, %i, %f, %i)",
-			     zone, zone_version, spawn->GetX(), spawn->GetY(), spawn->GetZ(), 1200, spawn->GetHeading(),
+	query = StringFormat("INSERT INTO spawn2 (zone, x, y, z, respawntime, heading, spawngroupID) "
+			     "VALUES('%s', %f, %f, %f, %i, %f, %i)",
+			     zone, spawn->GetX(), spawn->GetY(), spawn->GetZ(), 1200, spawn->GetHeading(),
 			     spawngroupid);
 	results = QueryDatabase(query);
 	if (!results.Success()) {
@@ -1563,7 +1497,6 @@ uint32 ZoneDatabase::CreateNewNPCCommand(
 
 uint32 ZoneDatabase::AddNewNPCSpawnGroupCommand(
 	const char *zone,
-	uint32 zone_version,
 	Client *client,
 	NPC *spawn,
 	uint32 respawnTime
@@ -1596,9 +1529,9 @@ uint32 ZoneDatabase::AddNewNPCSpawnGroupCommand(
 		respawntime = 1200;
 	}
 
-	query = StringFormat("INSERT INTO spawn2 (zone, version, x, y, z, respawntime, heading, spawngroupID) "
-			     "VALUES('%s', %u, %f, %f, %f, %i, %f, %i)",
-			     zone, zone_version, spawn->GetX(), spawn->GetY(), spawn->GetZ(), respawntime,
+	query = StringFormat("INSERT INTO spawn2 (zone, x, y, z, respawntime, heading, spawngroupID) "
+			     "VALUES('%s', %f, %f, %f, %i, %f, %i)",
+			     zone, spawn->GetX(), spawn->GetY(), spawn->GetZ(), respawntime,
 			     spawn->GetHeading(), last_insert_id);
 	results = QueryDatabase(query);
 	if (!results.Success()) {
@@ -1670,15 +1603,15 @@ uint32 ZoneDatabase::DeleteSpawnLeaveInNPCTypeTable(const char *zone, Client *cl
 	return 1;
 }
 
-uint32 ZoneDatabase::DeleteSpawnRemoveFromNPCTypeTable(const char *zone, uint32 zone_version, Client *client,
+uint32 ZoneDatabase::DeleteSpawnRemoveFromNPCTypeTable(const char *zone, Client *client,
 						       NPC *spawn)
 {
 	uint32 id = 0;
 	uint32 spawngroupID = 0;
 
 	std::string query = StringFormat("SELECT id, spawngroupID FROM spawn2 WHERE zone = '%s' "
-					 "AND (version = %u OR version = -1) AND spawngroupID = %i",
-					 zone, zone_version, spawn->GetSpawnGroupId());
+					 "AND spawngroupID = %i",
+					 zone, spawn->GetSpawnGroupId());
 	auto results = QueryDatabase(query);
 	if (!results.Success())
 		return 0;
@@ -1717,14 +1650,14 @@ uint32 ZoneDatabase::DeleteSpawnRemoveFromNPCTypeTable(const char *zone, uint32 
 	return 1;
 }
 
-uint32 ZoneDatabase::AddSpawnFromSpawnGroup(const char *zone, uint32 zone_version, Client *client, NPC *spawn,
+uint32 ZoneDatabase::AddSpawnFromSpawnGroup(const char *zone, Client *client, NPC *spawn,
 					    uint32 spawnGroupID)
 {
 	uint32 last_insert_id = 0;
 	std::string query =
-	    StringFormat("INSERT INTO spawn2 (zone, version, x, y, z, respawntime, heading, spawngroupID) "
-			 "VALUES('%s', %u, %f, %f, %f, %i, %f, %i)",
-			 zone, zone_version, client->GetX(), client->GetY(), client->GetZ(), 120, client->GetHeading(),
+	    StringFormat("INSERT INTO spawn2 (zone, x, y, z, respawntime, heading, spawngroupID) "
+			 "VALUES('%s', %f, %f, %f, %i, %f, %i)",
+			 zone, client->GetX(), client->GetY(), client->GetZ(), 120, client->GetHeading(),
 			 spawnGroupID);
 	auto results = QueryDatabase(query);
 	if (!results.Success())
@@ -1733,7 +1666,7 @@ uint32 ZoneDatabase::AddSpawnFromSpawnGroup(const char *zone, uint32 zone_versio
 	return 1;
 }
 
-uint32 ZoneDatabase::AddNPCTypes(const char *zone, uint32 zone_version, Client *client, NPC *spawn, uint32 spawnGroupID)
+uint32 ZoneDatabase::AddNPCTypes(const char *zone, Client *client, NPC *spawn, uint32 spawnGroupID)
 {
 	uint32 npc_type_id;
 	char numberlessName[64];
@@ -1758,14 +1691,14 @@ uint32 ZoneDatabase::AddNPCTypes(const char *zone, uint32 zone_version, Client *
 	return 1;
 }
 
-uint32 ZoneDatabase::NPCSpawnDB(uint8 command, const char* zone, uint32 zone_version, Client *c, NPC* spawn, uint32 extra) {
+uint32 ZoneDatabase::NPCSpawnDB(uint8 command, const char* zone, Client *c, NPC* spawn, uint32 extra) {
 
 	switch (command) {
 		case NPCSpawnTypes::CreateNewSpawn: { // Create a new NPC and add all spawn related data
-			return CreateNewNPCCommand(zone, zone_version, c, spawn, extra);
+			return CreateNewNPCCommand(zone, c, spawn, extra);
 		}
 		case NPCSpawnTypes::AddNewSpawngroup: { // Add new spawn group and spawn point for an existing NPC Type ID
-			return AddNewNPCSpawnGroupCommand(zone, zone_version, c, spawn, extra);
+			return AddNewNPCSpawnGroupCommand(zone, c, spawn, extra);
 		}
 		case NPCSpawnTypes::UpdateAppearance: { // Update npc_type appearance and other data on targeted spawn
 			return UpdateNPCTypeAppearance(c, spawn);
@@ -1774,13 +1707,13 @@ uint32 ZoneDatabase::NPCSpawnDB(uint8 command, const char* zone, uint32 zone_ver
 			return DeleteSpawnLeaveInNPCTypeTable(zone, c, spawn);
 		}
 		case NPCSpawnTypes::DeleteSpawn: { //delete spawn from DB (including npc_type)
-			return DeleteSpawnRemoveFromNPCTypeTable(zone, zone_version, c, spawn);
+			return DeleteSpawnRemoveFromNPCTypeTable(zone, c, spawn);
 		}
 		case NPCSpawnTypes::AddSpawnFromSpawngroup: { // add a spawn from spawngroup
-			return AddSpawnFromSpawnGroup(zone, zone_version, c, spawn, extra);
+			return AddSpawnFromSpawnGroup(zone, c, spawn, extra);
         }
 		case NPCSpawnTypes::CreateNewNPC: { // add npc_type
-			return AddNPCTypes(zone, zone_version, c, spawn, extra);
+			return AddNPCTypes(zone, c, spawn, extra);
 		}
 	}
 	return false;

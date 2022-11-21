@@ -44,7 +44,7 @@ void command_zheader(Client *c, const Seperator *sep)
 		fmt::format(
 			"Zone Header Load {} | Zone: {} ({}){}",
 			(
-				zone->LoadZoneCFG(zone_short_name, version) ?
+				zone->LoadZoneCFG(zone_short_name) ?
 				"Succeeded" :
 				"Failed"
 			),

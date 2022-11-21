@@ -44,7 +44,6 @@
 #include "../common/spdat.h"
 #include "../common/strings.h"
 #include "event_codes.h"
-#include "expedition.h"
 #include "guild_mgr.h"
 #include "map.h"
 #include "petitions.h"
@@ -70,42 +69,6 @@ bool Client::Process() {
 		// try to send all packets that weren't sent before
 		if (!IsLD() && zoneinpacket_timer.Check()) {
 			SendAllPackets();
-		}
-
-		if (adventure_request_timer) {
-			if (adventure_request_timer->Check()) {
-				safe_delete(adventure_request_timer);
-			}
-		}
-
-		if (adventure_create_timer) {
-			if (adventure_create_timer->Check()) {
-				safe_delete(adventure_create_timer);
-			}
-		}
-
-		if (adventure_leave_timer) {
-			if (adventure_leave_timer->Check()) {
-				safe_delete(adventure_leave_timer);
-			}
-		}
-
-		if (adventure_door_timer) {
-			if (adventure_door_timer->Check()) {
-				safe_delete(adventure_door_timer);
-			}
-		}
-
-		if (adventure_stats_timer) {
-			if (adventure_stats_timer->Check()) {
-				safe_delete(adventure_stats_timer);
-			}
-		}
-
-		if (adventure_leaderboard_timer) {
-			if (adventure_leaderboard_timer->Check()) {
-				safe_delete(adventure_leaderboard_timer);
-			}
 		}
 
 		if (dead) {
@@ -135,7 +98,6 @@ bool Client::Process() {
 			database.MoveCharacterToZone(GetName(), m_pp.binds[0].zone_id);
 
 			m_pp.zone_id = m_pp.binds[0].zone_id;
-			m_pp.zoneInstance = m_pp.binds[0].instance_id;
 			m_pp.x = m_pp.binds[0].x;
 			m_pp.y = m_pp.binds[0].y;
 			m_pp.z = m_pp.binds[0].z;
@@ -159,15 +121,6 @@ bool Client::Process() {
 			CalcItemScale();
 		}
 
-		if (TaskPeriodic_Timer.Check() && task_state)
-			task_state->TaskPeriodicChecks(this);
-
-		if (dynamiczone_removal_timer.Check() && zone && zone->GetInstanceID() != 0)
-		{
-			dynamiczone_removal_timer.Disable();
-			GoToDzSafeReturnOrBind(zone->GetDynamicZone());
-		}
-
 		if (linkdead_timer.Check()) {
 			LeaveGroup();
 			Save();
@@ -180,8 +133,6 @@ bool Client::Process() {
 			if (myraid) {
 				myraid->MemberZoned(this);
 			}
-
-			SetDynamicZoneMemberStatus(DynamicZoneMemberStatus::Offline);
 
 			parse->EventPlayer(EVENT_DISCONNECT, this, "", 0);
 
@@ -569,7 +520,6 @@ bool Client::Process() {
 			AI_Start(CLIENT_LD_TIMEOUT);
 			SendAppearancePacket(AT_Linkdead, 1);
 
-			SetDynamicZoneMemberStatus(DynamicZoneMemberStatus::LinkDead);
 		}
 	}
 
@@ -696,14 +646,9 @@ void Client::OnDisconnect(bool hard_disconnect) {
 
 		/* QS: PlayerLogConnectDisconnect */
 		if (RuleB(QueryServ, PlayerLogConnectDisconnect)){
-			std::string event_desc = StringFormat("Disconnect :: in zoneid:%i instid:%i", GetZoneID(), GetInstanceID());
+			std::string event_desc = StringFormat("Disconnect :: in zoneid:%i", GetZoneID());
 			QServ->PlayerLogEvent(Player_Log_Connect_State, CharacterID(), event_desc);
 		}
-	}
-
-	if (!bZoning)
-	{
-		SetDynamicZoneMemberStatus(DynamicZoneMemberStatus::Offline);
 	}
 
 	RemoveAllAuras();
@@ -1002,7 +947,7 @@ uint8 Client::WithCustomer(uint16 NewCustomer){
 	return 0;
 }
 
-void Client::OPRezzAnswer(uint32 Action, uint32 SpellID, uint16 ZoneID, uint16 InstanceID, float x, float y, float z)
+void Client::OPRezzAnswer(uint32 Action, uint32 SpellID, uint16 ZoneID, float x, float y, float z)
 {
 	if(PendingRezzXP < 0) {
 		// pendingrezexp is set to -1 if we are not expecting an OP_RezzAnswer
@@ -1016,9 +961,9 @@ void Client::OPRezzAnswer(uint32 Action, uint32 SpellID, uint16 ZoneID, uint16 I
 		// Mark the corpse as rezzed in the database, just in case the corpse has buried, or the zone the
 		// corpse is in has shutdown since the rez spell was cast.
 		database.MarkCorpseAsRezzed(PendingRezzDBID);
-		LogSpells("Player [{}] got a [{}] Rezz, spellid [{}] in zone[{}], instance id [{}]",
+		LogSpells("Player [{}] got a [{}] Rezz, spellid [{}] in zone[{}]",
 				name, (uint16)spells[SpellID].base_value[0],
-				SpellID, ZoneID, InstanceID);
+				SpellID, ZoneID);
 
 		if (RuleB(Spells, BuffsFadeOnDeath)) {
 			BuffFadeNonPersistDeath();
@@ -1057,7 +1002,7 @@ void Client::OPRezzAnswer(uint32 Action, uint32 SpellID, uint16 ZoneID, uint16 I
 
 		//Was sending the packet back to initiate client zone...
 		//but that could be abusable, so lets go through proper channels
-		MovePC(ZoneID, InstanceID, x, y, z, GetHeading(), 0, ZoneSolicited);
+		MovePC(ZoneID, x, y, z, GetHeading(), 0, ZoneSolicited);
 		entity_list.RefreshClientXTargets(this);
 	}
 	PendingRezzXP = -1;
@@ -1779,7 +1724,7 @@ void Client::OPGMSummon(const EQApplicationPacket *app)
 		{
 			Message(0, "Local: Summoning %s to %f, %f, %f", gms->charname, gms->x, gms->y, gms->z);
 			if (st->IsClient() && (st->CastToClient()->GetAnon() != 1 || Admin() >= st->CastToClient()->Admin()))
-				st->CastToClient()->MovePC(zone->GetZoneID(), zone->GetInstanceID(), (float)gms->x, (float)gms->y, (float)gms->z, GetHeading(), true);
+				st->CastToClient()->MovePC(zone->GetZoneID(), (float)gms->x, (float)gms->y, (float)gms->z, GetHeading(), true);
 			else
 				st->GMMove(GetX(), GetY(), GetZ(),GetHeading());
 		}
@@ -2037,7 +1982,6 @@ void Client::HandleRespawnFromHover(uint32 Option)
 		default_to_bind = new RespawnOption;
 		default_to_bind->name = "Bind Location";
 		default_to_bind->zone_id = b->zone_id;
-		default_to_bind->instance_id = b->instance_id;
 		default_to_bind->x = b->x;
 		default_to_bind->y = b->y;
 		default_to_bind->z = b->z;
@@ -2046,7 +1990,7 @@ void Client::HandleRespawnFromHover(uint32 Option)
 		is_rez = false;
 	}
 
-	if (chosen->zone_id == zone->GetZoneID() && chosen->instance_id == zone->GetInstanceID()) //If they should respawn in the current zone...
+	if (chosen->zone_id == zone->GetZoneID()) //If they should respawn in the current zone...
 	{
 		if (is_rez)
 		{
@@ -2072,7 +2016,6 @@ void Client::HandleRespawnFromHover(uint32 Option)
 			ZonePlayerToBind_Struct* gmg = (ZonePlayerToBind_Struct*) outapp->pBuffer;
 
 			gmg->bind_zone_id = zone->GetZoneID();
-			gmg->bind_instance_id = zone->GetInstanceID();
 			gmg->x = GetX();
 			gmg->y = GetY();
 			gmg->z = GetZ();
@@ -2083,7 +2026,7 @@ void Client::HandleRespawnFromHover(uint32 Option)
 
 			ClearHover();
 			SendHPUpdate();
-			OPRezzAnswer(1, PendingRezzSpellID, zone->GetZoneID(), zone->GetInstanceID(), GetX(), GetY(), GetZ());
+			OPRezzAnswer(1, PendingRezzSpellID, zone->GetZoneID(), GetX(), GetY(), GetZ());
 
 			if (corpse && corpse->IsCorpse())
 			{
@@ -2105,7 +2048,6 @@ void Client::HandleRespawnFromHover(uint32 Option)
 			ZonePlayerToBind_Struct* gmg = (ZonePlayerToBind_Struct*) outapp->pBuffer;
 
 			gmg->bind_zone_id = zone->GetZoneID();
-			gmg->bind_instance_id = chosen->instance_id;
 			gmg->x = chosen->x;
 			gmg->y = chosen->y;
 			gmg->z = chosen->z;
@@ -2153,12 +2095,11 @@ void Client::HandleRespawnFromHover(uint32 Option)
 			r->MemberZoned(this);
 
 		m_pp.zone_id = chosen->zone_id;
-		m_pp.zoneInstance = chosen->instance_id;
 		database.MoveCharacterToZone(CharacterID(), chosen->zone_id);
 
 		Save();
 
-		MovePC(chosen->zone_id, chosen->instance_id, chosen->x, chosen->y, chosen->z, chosen->heading, 1);
+		MovePC(chosen->zone_id, chosen->x, chosen->y, chosen->z, chosen->heading, 1);
 	}
 
 	safe_delete(default_to_bind);
@@ -2189,182 +2130,3 @@ void Client::ClearHover()
 	dead = false;
 }
 
-void Client::HandleLFGuildResponse(ServerPacket *pack)
-{
-	pack->SetReadPosition(8);
-
-	char Tmp[257];
-
-	pack->ReadString(Tmp);
-
-	pack->ReadSkipBytes(4);
-	uint32 SubType, NumberOfMatches;
-
-	SubType = pack->ReadUInt32();
-
-	switch(SubType)
-	{
-		case QSG_LFGuild_PlayerMatches:
-		{
-			NumberOfMatches = pack->ReadUInt32();
-			uint32 StartOfMatches = pack->GetReadPosition();
-			uint32 i = NumberOfMatches;
-			uint32 PacketSize = 12;
-			while(i > 0)
-			{
-				pack->ReadString(Tmp);
-				PacketSize += strlen(Tmp) + 1;
-				pack->ReadString(Tmp);
-				PacketSize += strlen(Tmp) + 1;
-				PacketSize += 16;
-				pack->ReadSkipBytes(16);
-				--i;
-			}
-
-			auto outapp = new EQApplicationPacket(OP_LFGuild, PacketSize);
-			outapp->WriteUInt32(3);
-			outapp->WriteUInt32(0xeb63);	// Don't know the significance of this value.
-			outapp->WriteUInt32(NumberOfMatches);
-			pack->SetReadPosition(StartOfMatches);
-
-			while(NumberOfMatches > 0)
-			{
-				pack->ReadString(Tmp);
-				outapp->WriteString(Tmp);
-				pack->ReadString(Tmp);
-				uint32 Level = pack->ReadUInt32();
-				uint32 Class = pack->ReadUInt32();
-				uint32 AACount = pack->ReadUInt32();
-				uint32 TimeZone = pack->ReadUInt32();
-				outapp->WriteUInt32(Level);
-				outapp->WriteUInt32(Class);
-				outapp->WriteUInt32(AACount);
-				outapp->WriteUInt32(TimeZone);
-				outapp->WriteString(Tmp);
-				--NumberOfMatches;
-			}
-
-			FastQueuePacket(&outapp);
-			break;
-		}
-		case QSG_LFGuild_RequestPlayerInfo:
-		{
-			auto outapp = new EQApplicationPacket(OP_LFGuild, sizeof(LFGuild_PlayerToggle_Struct));
-			LFGuild_PlayerToggle_Struct *pts = (LFGuild_PlayerToggle_Struct *)outapp->pBuffer;
-
-			pts->Command = 0;
-			pack->ReadString(pts->Comment);
-			pts->TimeZone = pack->ReadUInt32();
-			pts->TimePosted = pack->ReadUInt32();
-			pts->Toggle = pack->ReadUInt32();
-
-			FastQueuePacket(&outapp);
-
-			break;
-		}
-		case QSG_LFGuild_GuildMatches:
-		{
-			NumberOfMatches = pack->ReadUInt32();
-			uint32 StartOfMatches = pack->GetReadPosition();
-			uint32 i = NumberOfMatches;
-			uint32 PacketSize = 12;
-			while(i > 0)
-			{
-				pack->ReadString(Tmp);
-				PacketSize += strlen(Tmp) + 1;
-				pack->ReadSkipBytes(4);
-				pack->ReadString(Tmp);
-				PacketSize += strlen(Tmp) + 1;
-				PacketSize += 4;
-				--i;
-			}
-
-			auto outapp = new EQApplicationPacket(OP_LFGuild, PacketSize);
-			outapp->WriteUInt32(4);
-			outapp->WriteUInt32(0xeb63);
-			outapp->WriteUInt32(NumberOfMatches);
-			pack->SetReadPosition(StartOfMatches);
-
-			while(NumberOfMatches > 0)
-			{
-				pack->ReadString(Tmp);
-				uint32 TimeZone = pack->ReadUInt32();
-				outapp->WriteString(Tmp);
-				outapp->WriteUInt32(TimeZone);
-				pack->ReadString(Tmp);
-				outapp->WriteString(Tmp);
-				--NumberOfMatches;
-			}
-			FastQueuePacket(&outapp);
-
-			break;
-		}
-		case QSG_LFGuild_RequestGuildInfo:
-		{
-
-			char Comments[257];
-			uint32 FromLevel, ToLevel, Classes, AACount, TimeZone, TimePosted;
-
-			pack->ReadString(Comments);
-			FromLevel = pack->ReadUInt32();
-			ToLevel = pack->ReadUInt32();
-			Classes = pack->ReadUInt32();
-			AACount = pack->ReadUInt32();
-			TimeZone = pack->ReadUInt32();
-			TimePosted = pack->ReadUInt32();
-
-			auto outapp = new EQApplicationPacket(OP_LFGuild, sizeof(LFGuild_GuildToggle_Struct));
-
-			LFGuild_GuildToggle_Struct *gts = (LFGuild_GuildToggle_Struct *)outapp->pBuffer;
-			gts->Command = 1;
-			strcpy(gts->Comment, Comments);
-			gts->FromLevel = FromLevel;
-			gts->ToLevel = ToLevel;
-			gts->Classes = Classes;
-			gts->AACount = AACount;
-			gts->TimeZone = TimeZone;
-			gts->Toggle = 1;
-			gts->TimePosted = TimePosted;
-			gts->Name[0] = 0;
-
-			FastQueuePacket(&outapp);
-
-			break;
-		}
-
-		default:
-			break;
-	}
-
-}
-
-void Client::SendLFGuildStatus()
-{
-	auto pack = new ServerPacket(ServerOP_QueryServGeneric, strlen(GetName()) + 17);
-
-	pack->WriteUInt32(zone->GetZoneID());
-	pack->WriteUInt32(zone->GetInstanceID());
-	pack->WriteString(GetName());
-	pack->WriteUInt32(QSG_LFGuild);
-	pack->WriteUInt32(QSG_LFGuild_RequestPlayerInfo);
-
-	worldserver.SendPacket(pack);
-	safe_delete(pack);
-
-}
-
-void Client::SendGuildLFGuildStatus()
-{
-	auto pack = new ServerPacket(ServerOP_QueryServGeneric,
-				     strlen(GetName()) + +strlen(guild_mgr.GetGuildName(GuildID())) + 18);
-
-	pack->WriteUInt32(zone->GetZoneID());
-	pack->WriteUInt32(zone->GetInstanceID());
-	pack->WriteString(GetName());
-	pack->WriteUInt32(QSG_LFGuild);
-	pack->WriteUInt32(QSG_LFGuild_RequestGuildInfo);
-	pack->WriteString(guild_mgr.GetGuildName(GuildID()));
-
-	worldserver.SendPacket(pack);
-	safe_delete(pack);
-}

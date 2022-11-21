@@ -8,11 +8,7 @@
 #include "../common/repositories/character_task_timers_repository.h"
 #include "../common/rulesys.h"
 #include "../common/strings.h"
-#include "adventure_manager.h"
-#include "dynamic_zone_manager.h"
-#include "expedition_database.h"
 #include "login_server_list.h"
-#include "shared_task_manager.h"
 #include "ucs.h"
 #include "wguild_mgr.h"
 #include "world_boot.h"
@@ -271,8 +267,6 @@ void WorldBoot::RegisterLoginservers()
 	}
 }
 
-extern SharedTaskManager   shared_task_manager;
-extern AdventureManager    adventure_manager;
 extern WorldEventScheduler event_scheduler;
 
 bool WorldBoot::DatabaseLoadRoutines(int argc, char **argv)
@@ -395,34 +389,6 @@ bool WorldBoot::DatabaseLoadRoutines(int argc, char **argv)
 
 	LogInfo("Deleted [{}] stale player corpses from database", database.DeleteStalePlayerCorpses());
 
-	LogInfo("Loading adventures");
-	if (!adventure_manager.LoadAdventureTemplates()) {
-		LogInfo("Unable to load adventure templates");
-	}
-
-	if (!adventure_manager.LoadAdventureEntries()) {
-		LogInfo("Unable to load adventure templates");
-	}
-
-	adventure_manager.LoadLeaderboardInfo();
-
-	LogInfo("Purging expired dynamic zones and members");
-	dynamic_zone_manager.PurgeExpiredDynamicZones();
-
-	LogInfo("Purging expired expeditions");
-	ExpeditionDatabase::PurgeExpiredExpeditions();
-	ExpeditionDatabase::PurgeExpiredCharacterLockouts();
-
-	LogInfo("Purging expired character task timers");
-	CharacterTaskTimersRepository::DeleteWhere(database, "expire_time <= NOW()");
-
-	LogInfo("Purging expired instances");
-	database.PurgeExpiredInstances();
-
-	LogInfo("Loading dynamic zones");
-	dynamic_zone_manager.LoadTemplates();
-	dynamic_zone_manager.CacheAllFromDatabase();
-
 	LogInfo("Loading char create info");
 	content_db.LoadCharacterCreateAllocations();
 	content_db.LoadCharacterCreateCombos();
@@ -434,14 +400,6 @@ bool WorldBoot::DatabaseLoadRoutines(int argc, char **argv)
 	content_service.SetDatabase(&database)
 		->SetExpansionContext()
 		->ReloadContentFlags();
-
-	LogInfo("Initializing [SharedTaskManager]");
-	shared_task_manager.SetDatabase(&database)
-		->SetContentDatabase(&content_db)
-		->LoadTaskData()
-		->LoadSharedTaskState();
-
-	shared_task_manager.PurgeExpiredSharedTasks();
 
 	return true;
 }

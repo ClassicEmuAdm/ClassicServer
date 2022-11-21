@@ -12,10 +12,9 @@ void command_zunderworld(Client *c, const Seperator *sep)
 	auto permanent = sep->arg[2] ? atobool(sep->arg[2]) : false;
 	if (permanent) {
 		auto query = fmt::format(
-			"UPDATE zone SET underworld = {:.2f} WHERE zoneidnumber = {} AND version = {}",
+			"UPDATE zone SET underworld = {:.2f} WHERE zoneidnumber = {}",
 			z,
-			zone->GetZoneID(),
-			zone->GetInstanceVersion()
+			zone->GetZoneID()
 		);
 		database.QueryDatabase(query);
 	}

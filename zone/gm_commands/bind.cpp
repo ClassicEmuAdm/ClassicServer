@@ -7,13 +7,7 @@ void command_bind(Client *c, const Seperator *sep)
 		target = c->GetTarget()->CastToClient();
 	}
 
-	bool bind_allowed = (
-		!zone->GetInstanceID() ||
-		(
-			zone->GetInstanceID() != 0 &&
-			zone->IsInstancePersistent()
-		)
-	);
+	bool bind_allowed = true;
 
 	if (!bind_allowed) {
 		c->Message(Chat::White, "You cannot bind here.");

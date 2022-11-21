@@ -66,7 +66,7 @@ void command_timezone(Client *c, const Seperator *sep)
 
 	uint32 new_timezone = ((hours * 60) + minutes);
 	zone->zone_time.setEQTimeZone(new_timezone);
-	content_db.SetZoneTZ(zone->GetZoneID(), zone->GetInstanceVersion(), new_timezone);
+	content_db.SetZoneTZ(zone->GetZoneID(), new_timezone);
 
 	auto outapp = new EQApplicationPacket(OP_TimeOfDay, sizeof(TimeOfDay_Struct));
 	TimeOfDay_Struct *tod = (TimeOfDay_Struct *) outapp->pBuffer;

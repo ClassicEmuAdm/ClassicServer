@@ -509,14 +509,7 @@ bool Database::SaveCharacterCreate(uint32 character_id, uint32 account_id, Playe
 		"thirst_level,"
 		"ability_up,"
 		"zone_id,"
-		"zone_instance,"
 		"leadership_exp_on,"
-		"ldon_points_guk,"
-		"ldon_points_mir,"
-		"ldon_points_mmc,"
-		"ldon_points_ruj,"
-		"ldon_points_tak,"
-		"ldon_points_available,"
 		"tribute_time_remaining,"
 		"show_helm,"
 		"career_tribute_points,"
@@ -600,14 +593,7 @@ bool Database::SaveCharacterCreate(uint32 character_id, uint32 account_id, Playe
 		"%i,"  // thirst_level
 		"%u,"  // ability_up
 		"%u,"  // zone_id
-		"%u,"  // zone_instance
 		"%u,"  // leadership_exp_on
-		"%u,"  // ldon_points_guk
-		"%u,"  // ldon_points_mir
-		"%u,"  // ldon_points_mmc
-		"%u,"  // ldon_points_ruj
-		"%u,"  // ldon_points_tak
-		"%u,"  // ldon_points_available
 		"%u,"  // tribute_time_remaining
 		"%u,"  // show_helm
 		"%u,"  // career_tribute_points
@@ -691,14 +677,7 @@ bool Database::SaveCharacterCreate(uint32 character_id, uint32 account_id, Playe
 		pp->thirst_level,				  // " thirst_level,              "
 		pp->ability_up,					  // " ability_up,                "
 		pp->zone_id,					  // " zone_id,                   "
-		pp->zoneInstance,				  // " zone_instance,             "
 		pp->leadAAActive,				  // " leadership_exp_on,         "
-		pp->ldon_points_guk,			  // " ldon_points_guk,           "
-		pp->ldon_points_mir,			  // " ldon_points_mir,           "
-		pp->ldon_points_mmc,			  // " ldon_points_mmc,           "
-		pp->ldon_points_ruj,			  // " ldon_points_ruj,           "
-		pp->ldon_points_tak,			  // " ldon_points_tak,           "
-		pp->ldon_points_available,		  // " ldon_points_available,     "
 		pp->tribute_time_remaining,		  // " tribute_time_remaining,    "
 		pp->showhelm,					  // " show_helm,                 "
 		pp->career_tribute_points,		  // " career_tribute_points,     "
@@ -728,17 +707,17 @@ bool Database::SaveCharacterCreate(uint32 character_id, uint32 account_id, Playe
 	auto results = QueryDatabase(query);
 
 	/* Save Bind Points */
-	query = StringFormat("REPLACE INTO `character_bind` (id, zone_id, instance_id, x, y, z, heading, slot)"
-		" VALUES (%u, %u, %u, %f, %f, %f, %f, %i), "
-		"(%u, %u, %u, %f, %f, %f, %f, %i), "
-		"(%u, %u, %u, %f, %f, %f, %f, %i), "
-		"(%u, %u, %u, %f, %f, %f, %f, %i), "
-		"(%u, %u, %u, %f, %f, %f, %f, %i)",
-		character_id, pp->binds[0].zone_id, 0, pp->binds[0].x, pp->binds[0].y, pp->binds[0].z, pp->binds[0].heading, 0,
-		character_id, pp->binds[1].zone_id, 0, pp->binds[1].x, pp->binds[1].y, pp->binds[1].z, pp->binds[1].heading, 1,
-		character_id, pp->binds[2].zone_id, 0, pp->binds[2].x, pp->binds[2].y, pp->binds[2].z, pp->binds[2].heading, 2,
-		character_id, pp->binds[3].zone_id, 0, pp->binds[3].x, pp->binds[3].y, pp->binds[3].z, pp->binds[3].heading, 3,
-		character_id, pp->binds[4].zone_id, 0, pp->binds[4].x, pp->binds[4].y, pp->binds[4].z, pp->binds[4].heading, 4
+	query = StringFormat("REPLACE INTO `character_bind` (id, zone_id, x, y, z, heading, slot)"
+		" VALUES (%u, %u, %f, %f, %f, %f, %i), "
+		"(%u, %u, %f, %f, %f, %f, %i), "
+		"(%u, %u, %f, %f, %f, %f, %i), "
+		"(%u, %u, %f, %f, %f, %f, %i), "
+		"(%u, %u, %f, %f, %f, %f, %i)",
+		character_id, pp->binds[0].zone_id, pp->binds[0].x, pp->binds[0].y, pp->binds[0].z, pp->binds[0].heading, 0,
+		character_id, pp->binds[1].zone_id, pp->binds[1].x, pp->binds[1].y, pp->binds[1].z, pp->binds[1].heading, 1,
+		character_id, pp->binds[2].zone_id, pp->binds[2].x, pp->binds[2].y, pp->binds[2].z, pp->binds[2].heading, 2,
+		character_id, pp->binds[3].zone_id, pp->binds[3].x, pp->binds[3].y, pp->binds[3].z, pp->binds[3].heading, 3,
+		character_id, pp->binds[4].zone_id, pp->binds[4].x, pp->binds[4].y, pp->binds[4].z, pp->binds[4].heading, 4
 	); results = QueryDatabase(query);
 
         /* HoTT Ability */
@@ -1063,9 +1042,9 @@ bool Database::GetZoneGraveyard(const uint32 graveyard_id, uint32* graveyard_zon
 	return true;
 }
 
-uint8 Database::GetPEQZone(uint32 zone_id, uint32 version){
+uint8 Database::GetPEQZone(uint32 zone_id){
 
-	auto z = GetZoneVersionWithFallback(zone_id, version);
+	auto z = GetZoneVersionWithFallback(zone_id);
 
 	return z ? z->peqzone : 0;
 }
@@ -1385,10 +1364,10 @@ uint8 Database::GetSkillCap(uint8 skillid, uint8 in_race, uint8 in_class, uint16
 	return base_cap;
 }
 
-uint32 Database::GetCharacterInfo(std::string character_name, uint32 *account_id, uint32 *zone_id, uint32 *instance_id)
+uint32 Database::GetCharacterInfo(std::string character_name, uint32 *account_id, uint32 *zone_id)
 {
 	auto query = fmt::format(
-		"SELECT `id`, `account_id`, `zone_id`, `zone_instance` FROM `character_data` WHERE `name` = '{}'",
+		"SELECT `id`, `account_id`, `zone_id` FROM `character_data` WHERE `name` = '{}'",
 		Strings::Escape(character_name)
 	);
 
@@ -1401,7 +1380,6 @@ uint32 Database::GetCharacterInfo(std::string character_name, uint32 *account_id
 	auto character_id = std::stoul(row[0]);
 	*account_id = std::stoul(row[1]);
 	*zone_id = std::stoul(row[2]);
-	*instance_id = std::stoul(row[3]);
 
 	return character_id;
 }
@@ -1931,107 +1909,6 @@ void Database::ClearRaidLeader(uint32 gid, uint32 rid)
 	QueryDatabase(query);
 }
 
-void Database::UpdateAdventureStatsEntry(uint32 char_id, uint8 theme, bool win, bool remove)
-{
-	std::string field;
-	switch(theme) {
-		case LDoNThemes::GUK: {
-			field = "guk_";
-			break;
-		}
-		case LDoNThemes::MIR: {
-			field = "mir_";
-			break;
-		}
-		case LDoNThemes::MMC: {
-			field = "mmc_";
-			break;
-		}
-		case LDoNThemes::RUJ: {
-			field = "ruj_";
-			break;
-		}
-		case LDoNThemes::TAK: {
-			field = "tak_";
-			break;
-		}
-		default: {
-			return;
-		}
-	}
-
-	field += win ? "wins" : "losses";
-	std::string field_operation = remove ? "-" : "+";
-
-	std::string query = fmt::format(
-		"UPDATE `adventure_stats` SET {} = {} {} 1 WHERE player_id = {}",
-		field,
-		field,
-		field_operation,
-		char_id
-	);
-	auto results = QueryDatabase(query);
-
-	if (results.RowsAffected() != 0) {
-		return;
-	}
-
-	if (!remove) {
-		query = fmt::format(
-			"INSERT INTO `adventure_stats` SET {} = 1, player_id = {}",
-			field,
-			char_id
-		);
-		QueryDatabase(query);
-	}
-}
-
-bool Database::GetAdventureStats(uint32 char_id, AdventureStats_Struct *as)
-{
-	std::string query = fmt::format(
-		"SELECT "
-		"`guk_wins`, "
-		"`mir_wins`, "
-		"`mmc_wins`, "
-		"`ruj_wins`, "
-		"`tak_wins`, "
-		"`guk_losses`, "
-		"`mir_losses`, "
-		"`mmc_losses`, "
-		"`ruj_losses`, "
-		"`tak_losses` "
-		"FROM "
-		"`adventure_stats` "
-		"WHERE "
-		"player_id = {}",
-		char_id
-	);
-	auto results = QueryDatabase(query);
-
-	if (!results.Success())
-		return false;
-
-	if (results.RowCount() == 0)
-		return false;
-
-	auto row = results.begin();
-
-	as->success.guk = atoi(row[0]);
-	as->success.mir = atoi(row[1]);
-	as->success.mmc = atoi(row[2]);
-	as->success.ruj = atoi(row[3]);
-	as->success.tak = atoi(row[4]);
-	as->failure.guk = atoi(row[5]);
-	as->failure.mir = atoi(row[6]);
-	as->failure.mmc = atoi(row[7]);
-	as->failure.ruj = atoi(row[8]);
-	as->failure.tak = atoi(row[9]);
-	as->failure.total = as->failure.guk + as->failure.mir + as->failure.mmc + as->failure.ruj + as->failure.tak;
-	as->success.total = as->success.guk + as->success.mir + as->success.mmc + as->success.ruj + as->success.tak;
-
-	return true;
-}
-
 uint32 Database::GetGuildIDByCharID(uint32 character_id)
 {
 	std::string query = StringFormat("SELECT guild_id FROM guild_members WHERE char_id='%i'", character_id);
@@ -2194,18 +2071,6 @@ void Database::SetIPExemption(std::string account_ip, int exemption_amount) {
 	}
 
 	QueryDatabase(query);
-}
-
-int Database::GetInstanceID(uint32 char_id, uint32 zone_id) {
-	std::string query = StringFormat("SELECT instance_list.id FROM instance_list INNER JOIN instance_list_player ON instance_list.id = instance_list_player.id WHERE instance_list.zone = '%i' AND instance_list_player.charid = '%i'", zone_id, char_id);
-	auto results = QueryDatabase(query);
-
-	if (results.Success() && results.RowCount() > 0) {
-		auto row = results.begin();
-		return atoi(row[0]);;
-	}
-
-	return 0;
 }
 
 /**
@@ -2412,14 +2277,13 @@ void Database::SourceDatabaseTableFromUrl(std::string table_name, std::string ur
 	}
 }
 
-uint8 Database::GetMinStatus(uint32 zone_id, uint32 instance_version)
+uint8 Database::GetMinStatus(uint32 zone_id)
 {
 	auto zones = ZoneRepository::GetWhere(
 		*this,
 		fmt::format(
-			"zoneidnumber = {} AND (version = {} OR version = 0) ORDER BY version DESC LIMIT 1",
-			zone_id,
-			instance_version
+			"zoneidnumber = {} DESC LIMIT 1",
+			zone_id
 		)
 	);
 

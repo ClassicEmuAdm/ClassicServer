@@ -11,7 +11,6 @@ void command_summonburiedplayercorpse(Client *c, const Seperator *sep)
 	auto *corpse = database.SummonBuriedCharacterCorpses(
 		target->CharacterID(),
 		target->GetZoneID(),
-		zone->GetInstanceID(),
 		target->GetPosition()
 	);
 

@@ -57,7 +57,6 @@ public:
 	inline uint32		GetIP()				{ return ip; }
 	inline uint16		GetPort()			{ return port; }
 	inline uint32		GetZoneID()			{ return zone_id; }
-	inline uint32		GetInstanceID()		{ return instance_id; }
 	inline uint32		WaitingForBootup()	{ return zone_waiting_for_bootup; }
 	inline const char *	GetAccountName()	{ if (cle) { return cle->AccountName(); } return "NOCLE"; }
 	inline int16		GetAdmin()			{ if (cle) { return cle->Admin(); } return 0; }
@@ -83,7 +82,6 @@ private:
 	uint32	charid;
 	char	char_name[64];
 	uint32	zone_id;
-	uint32	instance_id;
 	bool	is_player_zoning;
 	Timer	autobootup_timeout;
 	uint32	zone_waiting_for_bootup;

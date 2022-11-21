@@ -80,20 +80,16 @@ union semun {
 #include "clientlist.h"
 #include "launcher_list.h"
 #include "lfplist.h"
-#include "adventure_manager.h"
 #include "ucs.h"
 #include "queryserv.h"
 #include "web_interface.h"
 #include "console.h"
-#include "dynamic_zone_manager.h"
-#include "expedition_database.h"
 
 #include "world_server_cli.h"
 #include "../common/content/world_content_service.h"
 #include "../common/repositories/character_task_timers_repository.h"
 #include "../common/zone_store.h"
 #include "world_event_scheduler.h"
-#include "shared_task_manager.h"
 #include "world_boot.h"
 #include "../common/path_manager.h"
 
@@ -106,9 +102,7 @@ LoginServerList     loginserverlist;
 UCSConnection       UCSLink;
 QueryServConnection QSLink;
 LauncherList        launcher_list;
-AdventureManager    adventure_manager;
 WorldEventScheduler event_scheduler;
-SharedTaskManager   shared_task_manager;
 EQ::Random          emu_random;
 volatile bool       RunLoops   = true;
 uint32              numclients = 0;
@@ -181,8 +175,6 @@ int main(int argc, char **argv)
 	}
 
 	// timers
-	Timer PurgeInstanceTimer(450000);
-	PurgeInstanceTimer.Start(450000);
 	Timer EQTimeTimer(600000);
 	EQTimeTimer.Start(600000);
 
@@ -418,13 +410,6 @@ int main(int argc, char **argv)
 
 		client_list.Process();
 
-		if (PurgeInstanceTimer.Check()) {
-			database.PurgeExpiredInstances();
-			database.PurgeAllDeletedDataBuckets();
-			ExpeditionDatabase::PurgeExpiredCharacterLockouts();
-			CharacterTaskTimersRepository::DeleteWhere(database, "expire_time <= NOW()");
-		}
-
 		if (EQTimeTimer.Check()) {
 			TimeOfDay_Struct tod;
 			zoneserver_list.worldclock.GetCurrentEQTimeOfDay(time(0), &tod);
@@ -437,9 +422,6 @@ int main(int argc, char **argv)
 		zoneserver_list.Process();
 		launcher_list.Process();
 		LFPGroupList.Process();
-		adventure_manager.Process();
-		shared_task_manager.Process();
-		dynamic_zone_manager.Process();
 
 		if (InterserverTimer.Check()) {
 			InterserverTimer.Start();

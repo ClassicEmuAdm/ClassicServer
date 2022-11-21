@@ -43,30 +43,27 @@ void command_zclip(Client *c, const Seperator *sep)
 
 		if (permanent) {
 			auto query = fmt::format(
-				"UPDATE zone SET minclip = {:.2f}, maxclip = {:.2f} WHERE zoneidnumber = {} AND version = {}",
+				"UPDATE zone SET minclip = {:.2f}, maxclip = {:.2f} WHERE zoneidnumber = {}",
 				minimum_clip,
 				maximum_clip,
-				zone->GetZoneID(),
-				zone->GetInstanceVersion()
+				zone->GetZoneID()
 			);
 			database.QueryDatabase(query);
 
 			if (minimum_fog_clip) {
 				query = fmt::format(
-					"UPDATE zone SET fog_minclip = {:.2f} WHERE zoneidnumber = {} AND version = {}",
+					"UPDATE zone SET fog_minclip = {:.2f} WHERE zoneidnumber = {}",
 					minimum_fog_clip,
-					zone->GetZoneID(),
-					zone->GetInstanceVersion()
+					zone->GetZoneID()
 				);
 				database.QueryDatabase(query);
 			}
 
 			if (maximum_fog_clip) {
 				query = fmt::format(
-					"UPDATE zone SET fog_maxclip = {:.2f} WHERE zoneidnumber = {} AND version = {}",
+					"UPDATE zone SET fog_maxclip = {:.2f} WHERE zoneidnumber = {}",
 					maximum_fog_clip,
-					zone->GetZoneID(),
-					zone->GetInstanceVersion()
+					zone->GetZoneID()
 				);
 				database.QueryDatabase(query);
 			}

@@ -672,7 +672,7 @@ QuestInterface *QuestParserCollection::GetQIByPlayerQuest(std::string &filename)
 		return nullptr;
 
 	// first look for /quests/zone/player_v[instance_version].ext (precedence)
-	filename = fmt::format("{}/{}/player_v{}", path.GetQuestsPath(), zone->GetShortName(), zone->GetInstanceVersion());
+	filename = fmt::format("{}/{}/player_v{}", path.GetQuestsPath(), zone->GetShortName(), 0);
 	std::string tmp;
 	FILE *f = nullptr;
 
@@ -1240,7 +1240,7 @@ QuestInterface *QuestParserCollection::GetQIByBotQuest(std::string &filename) {
 	}
 
 	// first look for /quests/zone/bot_v[instance_version].ext (precedence)
-	filename = fmt::format("{}/{}/bot_v{}", path.GetQuestsPath(), zone->GetShortName(), zone->GetInstanceVersion());
+	filename = fmt::format("{}/{}/bot_v{}", path.GetQuestsPath(), zone->GetShortName(), 0);
 	std::string tmp;
 	FILE *f = nullptr;
 

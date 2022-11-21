@@ -85,9 +85,6 @@ void command_reload(Client *c, const Seperator *sep)
 	} else if (is_doors) {
 		c->Message(Chat::White, "Attempting to reload Doors globally.");
 		pack = new ServerPacket(ServerOP_ReloadDoors, 0);
-	} else if (is_dztemplates) {
-		c->Message(Chat::White, "Attempting to reload Dynamic Zone Templates globally.");
-		pack = new ServerPacket(ServerOP_ReloadDzTemplates, 0);
 	} else if (is_ground_spawns) {
 		c->Message(Chat::White, "Attempting to reload Ground Spawns globally.");
 		pack = new ServerPacket(ServerOP_ReloadGroundSpawns, 0);
@@ -140,18 +137,6 @@ void command_reload(Client *c, const Seperator *sep)
 	} else if (is_static) {
 		c->Message(Chat::White, "Attempting to reload Static Zone Data globally.");
 		pack = new ServerPacket(ServerOP_ReloadStaticZoneData, 0);
-	} else if (is_tasks) {
-		uint32 task_id = 0;
-		if (!sep->IsNumber(2)) {
-			c->Message(Chat::White, "Attempting to reload Tasks globally.");
-			pack = new ServerPacket(ServerOP_ReloadTasks, sizeof(ReloadTasks_Struct));
-		} else {
-			task_id = std::stoul(sep->arg[2]);
-		}
-
-		auto rts = (ReloadTasks_Struct*) pack->pBuffer;
-		rts->reload_type = RELOADTASKS;
-		rts->task_id = task_id;
 	} else if (is_titles) {
 		c->Message(Chat::White, "Attempting to reload Titles globally.");
 		pack = new ServerPacket(ServerOP_ReloadTitles, 0);
@@ -229,7 +214,7 @@ void command_reload(Client *c, const Seperator *sep)
 				fmt::format(
 					"Zone Header Load {} | Zone: {}",
 					(
-						zone->LoadZoneCFG(zone->GetShortName(), zone->GetInstanceVersion()) ?
+						zone->LoadZoneCFG(zone->GetShortName()) ?
 						"Succeeded" :
 						"Failed"
 					),
@@ -273,7 +258,7 @@ void command_reload(Client *c, const Seperator *sep)
 			fmt::format(
 				"Zone Header Load {} | Zone: {} ({}){}",
 				(
-					zone->LoadZoneCFG(zone_short_name, version) ?
+					zone->LoadZoneCFG(zone_short_name) ?
 					"Succeeded" :
 					"Failed"
 				),

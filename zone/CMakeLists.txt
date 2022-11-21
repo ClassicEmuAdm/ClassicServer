@@ -10,13 +10,8 @@ SET(zone_sources
     aura.cpp
     beacon.cpp
     bonuses.cpp
-    bot.cpp
-    bot_command.cpp
-    bot_database.cpp
-    botspellsai.cpp
     cheat_manager.cpp
     client.cpp
-    client_bot.cpp
     client_mods.cpp
     client_packet.cpp
     client_process.cpp
@@ -26,7 +21,6 @@ SET(zone_sources
     data_bucket.cpp
     doors.cpp
     dialogue_window.cpp
-    dynamic_zone.cpp
     effects.cpp
     embparser.cpp
     embparser_api.cpp
@@ -35,9 +29,6 @@ SET(zone_sources
     encounter.cpp
     entity.cpp
     exp.cpp
-    expedition.cpp
-    expedition_database.cpp
-    expedition_request.cpp
     fastmath.cpp
     fearpath.cpp
     forage.cpp
@@ -45,11 +36,9 @@ SET(zone_sources
     guild.cpp
     guild_mgr.cpp
     hate_list.cpp
-    heal_rotation.cpp
     horse.cpp
     inventory.cpp
     loottables.cpp
-    lua_bot.cpp
     lua_bit.cpp
     lua_corpse.cpp
     lua_client.cpp
@@ -57,7 +46,6 @@ SET(zone_sources
     lua_encounter.cpp
     lua_entity.cpp
     lua_entity_list.cpp
-    lua_expedition.cpp
     lua_general.cpp
     lua_group.cpp
     lua_hate_list.cpp
@@ -107,11 +95,9 @@ SET(zone_sources
     pathfinder_nav_mesh.cpp
     pathfinder_null.cpp
     pathing.cpp
-    perl_bot.cpp
     perl_client.cpp
     perl_doors.cpp
     perl_entity.cpp
-    perl_expedition.cpp
     perl_groups.cpp
     perl_hateentry.cpp
     perl_inventory.cpp
@@ -133,16 +119,12 @@ SET(zone_sources
     quest_parser_collection.cpp
     raids.cpp
     raycast_mesh.cpp
-    shared_task_zone_messaging.cpp
     spawn2.cpp
     spawn2.h
     spawngroup.cpp
     special_attacks.cpp
     spell_effects.cpp
     spells.cpp
-    task_client_state.cpp
-    task_manager.cpp
-    tasks.cpp
     titles.cpp
     tradeskills.cpp
     trading.cpp
@@ -171,10 +153,6 @@ SET(zone_headers
     aura.h
     basic_functions.h
     beacon.h
-    bot.h
-    bot_command.h
-    bot_database.h
-    bot_structs.h
     cheat_manager.h
     client.h
     client_packet.h
@@ -185,7 +163,6 @@ SET(zone_headers
     data_bucket.h
     doors.h
     dialogue_window.h
-    dynamic_zone.h
     embparser.h
     embperl.h
     embxs.h
@@ -193,18 +170,13 @@ SET(zone_headers
     entity.h
     errmsg.h
     event_codes.h
-    expedition.h
-    expedition_database.h
-    expedition_request.h
     fastmath.h
     forage.h
     global_loot_manager.h
     groups.h
     guild_mgr.h
     hate_list.h
-    heal_rotation.h
     horse.h
-    lua_bot.h
     lua_bit.h
     lua_client.h
     lua_corpse.h
@@ -212,7 +184,6 @@ SET(zone_headers
     lua_encounter.h
     lua_entity.h
     lua_entity_list.h
-    lua_expedition.h
     lua_general.h
     lua_group.h
     lua_hate_list.h
@@ -259,14 +230,10 @@ SET(zone_headers
     raids.h
     raycast_mesh.h
     skills.h
-    shared_task_zone_messaging.h
     spawn2.cpp
     spawn2.h
     spawngroup.h
     string_ids.h
-    task_client_state.h
-    task_manager.h
-    tasks.h
     titles.h
     trap.h
     water_map.h
