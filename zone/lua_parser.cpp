@@ -997,7 +997,7 @@ void LuaParser::ReloadQuests() {
 	//zone init - always loads after global
 	if(zone) {
 		std::string zone_script = fmt::format(
-			"{}/{}/script_init_v{}.lua",
+			"{}/{}/script_init.lua",
 			path.GetQuestsPath(),
 			zone->GetShortName()
 		);

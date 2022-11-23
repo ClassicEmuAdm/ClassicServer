@@ -14,7 +14,6 @@ void command_reload(Client *c, const Seperator *sep)
 	bool is_commands = !strcasecmp(sep->arg[1], "commands");
 	bool is_content_flags = !strcasecmp(sep->arg[1], "content_flags");
 	bool is_doors = !strcasecmp(sep->arg[1], "doors");
-	bool is_dztemplates = !strcasecmp(sep->arg[1], "dztemplates");
 	bool is_ground_spawns = !strcasecmp(sep->arg[1], "ground_spawns");
 	bool is_level_mods = !strcasecmp(sep->arg[1], "level_mods");
 	bool is_logs = !strcasecmp(sep->arg[1], "logs");
@@ -25,7 +24,6 @@ void command_reload(Client *c, const Seperator *sep)
 	bool is_quest = !strcasecmp(sep->arg[1], "quest");
 	bool is_rules = !strcasecmp(sep->arg[1], "rules");
 	bool is_static = !strcasecmp(sep->arg[1], "static");
-	bool is_tasks = !strcasecmp(sep->arg[1], "tasks");
 	bool is_titles = !strcasecmp(sep->arg[1], "titles");
 	bool is_traps = !strcasecmp(sep->arg[1], "traps");
 	bool is_variables = !strcasecmp(sep->arg[1], "variables");
@@ -41,7 +39,6 @@ void command_reload(Client *c, const Seperator *sep)
 		!is_commands &&
 		!is_content_flags &&
 		!is_doors &&
-		!is_dztemplates &&
 		!is_ground_spawns &&
 		!is_level_mods &&
 		!is_logs &&
@@ -52,7 +49,6 @@ void command_reload(Client *c, const Seperator *sep)
 		!is_quest &&
 		!is_rules &&
 		!is_static &&
-		!is_tasks &&
 		!is_titles &&
 		!is_traps &&
 		!is_variables &&
@@ -242,11 +238,6 @@ void command_reload(Client *c, const Seperator *sep)
 
 		auto zone_short_name = ZoneName(zone_id);
 		auto zone_long_name = ZoneLongName(zone_id);
-		auto version = (
-			sep->IsNumber(3) ?
-			std::stoul(sep->arg[3]) :
-			0
-		);
 
 		auto outapp = new EQApplicationPacket(OP_NewZone, sizeof(NewZone_Struct));
 		memcpy(outapp->pBuffer, &zone->newzone_data, outapp->size);
@@ -256,22 +247,14 @@ void command_reload(Client *c, const Seperator *sep)
 		c->Message(
 			Chat::White,
 			fmt::format(
-				"Zone Header Load {} | Zone: {} ({}){}",
+				"Zone Header Load {} | Zone: {} ({})",
 				(
 					zone->LoadZoneCFG(zone_short_name) ?
 					"Succeeded" :
 					"Failed"
 				),
 				zone_long_name,
-				zone_short_name,
-				(
-					version ?
-					fmt::format(
-						" Version: {}",
-						version
-					) :
-					""
-				)
+				zone_short_name
 			).c_str()
 		);
 	} else if (is_zone_points) {
