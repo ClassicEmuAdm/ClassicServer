@@ -2282,7 +2282,7 @@ uint8 Database::GetMinStatus(uint32 zone_id)
 	auto zones = ZoneRepository::GetWhere(
 		*this,
 		fmt::format(
-			"zoneidnumber = {} DESC LIMIT 1",
+			"zoneidnumber = {}",
 			zone_id
 		)
 	);
